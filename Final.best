@@ -1,0 +1,2923 @@
+--[[
+    GGshop XENO ULTIMATE
+    ПОЛНАЯ ВЕРСИЯ - ЧАСТЬ 1
+    Содержит: сервисы, цвета, таблицу настроек, функции ESP, Aim, Combat и др.
+]]
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 0: ПРОВЕРКА КЛЮЧА GGshop гайд
+-- ████████████████████████████████████████████████████████████
+if _G.GG_XENO_ULTIMATE_LOADED then
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "GGshop XENO",
+        Text = "Скрипт уже загружен!",
+        Duration = 2
+    })
+    return
+end
+_G.GG_XENO_ULTIMATE_LOADED = true
+
+local PlayersService = game:GetService("Players")
+local username = PlayersService.LocalPlayer.Name
+
+local success, response = pcall(function()
+    return game:HttpGet("https://key-server-production-87e7.up.railway.app/check?user=" .. username)
+end)
+
+if not success then
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "GGshop XENO",
+        Text = "❌ Ошибка соединения с сервером!",
+        Duration = 5
+    })
+    error("Сервер ключей недоступен")
+    return
+end
+
+if response ~= "valid" then
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "GGshop XENO",
+        Text = "❌ Ты не купил скрипт! Купи тут: t.me:@GgShop_Dark_Side_bot:",
+        Duration = 10
+    })
+    error("Недействительный ключ")
+    return
+end
+
+print("✅ Добро пожаловать, " .. username .. "!")
+repeat task.wait() until game:IsLoaded()
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 1: ОСНОВНЫЕ СЕРВИСЫ
+-- ████████████████████████████████████████████████████████████
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 2: ЦВЕТА
+-- ████████████████████████████████████████████████████████████
+local COLORS = {
+    PINK_HOT = Color3.fromRGB(255, 105, 180),
+    PURPLE_MED = Color3.fromRGB(186, 85, 211),
+    PURPLE_DARK = Color3.fromRGB(138, 43, 226),
+    DARK_BLUE = Color3.fromRGB(25, 25, 112),
+    VISIBLE_GREEN = Color3.fromRGB(0, 255, 0),
+    INVISIBLE_RED = Color3.fromRGB(255, 0, 0),
+    WHITE = Color3.fromRGB(255, 255, 255),
+    BLACK = Color3.fromRGB(0, 0, 0),
+    GRAY_DARK = Color3.fromRGB(30, 30, 30),
+    GRAY_MED = Color3.fromRGB(50, 50, 50),
+    HEALTH_GREEN = Color3.fromRGB(0, 255, 0),
+    HEALTH_YELLOW = Color3.fromRGB(255, 255, 0),
+    HEALTH_RED = Color3.fromRGB(255, 0, 0),
+    NAME_COLOR = Color3.fromRGB(255, 255, 255),
+    DISTANCE_COLOR = Color3.fromRGB(200, 200, 200),
+    WEAPON_COLOR = Color3.fromRGB(255, 200, 100),
+    BOSS_INVISIBLE = Color3.fromRGB(128, 128, 128),
+    BOSS_VISIBLE = Color3.fromRGB(0, 0, 255),
+    SECONDARY_WEAPON_COLOR = Color3.fromRGB(200, 200, 100),
+}
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 3: ГЛОБАЛЬНАЯ ТАБЛИЦА НАСТРОЕК (с кэшированием)
+-- ████████████████████████████████████████████████████████████
+local Settings = {
+    ESP = {
+        Enabled = true,
+        MaxDistance = 1500,
+        Box = {
+            Enabled = true,
+            Outline = true,
+            OutlineColor = COLORS.WHITE,
+            Fill = false,
+            FillColor = COLORS.WHITE,
+        },
+        HealthBar = {
+            Enabled = true,
+            Position = "Left",
+        },
+        Name = {
+            Enabled = true,
+            ShowHealth = true,
+            ShowDistance = true,
+            Color = COLORS.NAME_COLOR,
+        },
+        Weapon = {
+            Enabled = true,
+            ShowAmmo = true,
+            Color = COLORS.WEAPON_COLOR,
+        },
+        SecondaryWeapon = {
+            Enabled = true,
+            ShowAmmo = true,
+            Color = COLORS.SECONDARY_WEAPON_COLOR,
+        },
+        Boss = {
+            Enabled = true,
+            ColorVisible = COLORS.BOSS_VISIBLE,
+            ColorHidden = COLORS.BOSS_INVISIBLE,
+        },
+        VisCheck = true,
+        TeamCheck = false,
+        Tracer = {
+            Enabled = true,
+            Color = COLORS.WHITE,
+        },
+    },
+
+    Aimbot = {
+        Enabled = true,
+        TeamCheck = false,
+        WallCheck = true,
+        AliveCheck = true,
+        LockPart = "Head",
+        Smoothness = 0.5,
+        FOV = 60,
+        ShowFOV = true,
+        TriggerKey = Enum.UserInputType.MouseButton2,
+        FOVSettings = {
+            Color = COLORS.WHITE,
+            Thickness = 1,
+            Transparency = 0.7,
+        },
+    },
+
+    BotsAim = {
+        Enabled = true,
+        LockPart = "Head",
+        MaxDistance = 500,
+        TargetDozer = true,
+        TargetAnton = true,
+    },
+
+    Misc = {
+        NoRecoil = false,
+        NoSpread = false,
+        FPSBoost = false,
+        NightVision = false,
+    },
+
+    DamageIndicator = {
+        Enabled = false,
+        Position = Vector2.new(0.8, 0.15),
+        Color = COLORS.HEALTH_RED,
+        Size = 20,
+        Duration = 0.5,
+    },
+
+    Combat = {
+        TargetHealth = {
+            Enabled = false,
+            Position = "BelowCrosshair",
+            FontSize = 14,
+            Color = COLORS.WHITE,
+        },
+        AntiSniper = {
+            Enabled = false,
+            Range = 500,
+            Sensitivity = 0.95,
+            WarningText = "🛡️ НА ТЕБЕ ПРИЦЕЛ! 🛡️",
+            WarningColor = COLORS.INVISIBLE_RED,
+            WarningSize = 24,
+            Cooldown = 0.5,
+            Sound = false,
+            ShowName = true,
+        },
+        BulletTracers = {
+            Enabled = false,
+            Duration = 0.3,
+            Color = COLORS.PINK_HOT,
+            Thickness = 2,
+        },
+        NoRecoil = false,
+        NoSpread = false,
+        NoJumpSpread = false,
+    },
+
+    HvH = {
+        Enabled = false,
+        AntiAim = {
+            Pitch = {
+                Enabled = false,
+                Mode = "Static",
+                Value = 0,
+            },
+            Yaw = {
+                Enabled = false,
+                Mode = "Static",
+                Value = 0,
+                Speed = 10,
+                JitterRange = 30,
+            },
+        },
+        AutoAntiAimOnHit = {
+            Enabled = false,
+            Duration = 1,
+        },
+    },
+
+    FakeLag = {
+        Enabled = false,
+        Key = Enum.KeyCode.RightBracket,
+        Duration = 0.3,
+        ActivateAntiAim = true,
+    },
+
+    Triggerbot = {
+        Enabled = false,
+        Key = "MouseButton2",
+        Delay = 0,
+        TeamCheck = false,
+        WallCheck = true,
+        Hitbox = "Head",
+        Range = 1000,
+    },
+
+    AdminESP = {
+        Enabled = false,
+        ShowInvisible = true,
+        BoxColor = Color3.fromRGB(255, 0, 0),
+        NameColor = Color3.fromRGB(255, 100, 100),
+        Tracer = false,
+    },
+
+    Visuals = {
+        NoFlash = false,
+        NoVisor = false,
+    },
+
+    BulletPhysics = {
+        Enabled = false,
+        NoGravity = true,
+        InstantHit = false,
+    },
+
+    ConfigProfile = 1,
+
+    MenuOpen = false,
+    holdingKey = false,
+    lastTool = nil,
+
+    ESPObjects = {},
+    ESPBossObjects = {},
+    VisibilityCache = {},
+    WeaponCache = {},
+    CACHE_DURATION = 0.1,
+    WEAPON_CACHE_DURATION = 0.2,
+
+    OriginalLighting = {
+        Ambient = Lighting.Ambient,
+        Brightness = Lighting.Brightness,
+        GlobalShadows = Lighting.GlobalShadows,
+        OutdoorAmbient = Lighting.OutdoorAmbient,
+    },
+
+    isLagging = false,
+    lagEndTime = 0,
+    originalWalkSpeed = 16,
+
+    hitAntiAimUntil = 0,
+
+    frameSkipCounter = 0,
+    FRAME_SKIP = 3,
+
+    BossNames = {
+        ["Anton"] = true,
+        ["Dozer"] = true,
+        ["ANTON"] = true,
+        ["DOZER"] = true,
+        ["Boss"] = true,
+    },
+
+    HitmarkerSound = true,
+    HitmarkerHeadshotSound = true,
+    HitmarkerSoundId = "rbxassetid://103094294870161",
+
+    PlayerCache = {},
+    FlashGrenades = {},
+    VisorParts = {},
+}
+
+Settings.Combat.NoRecoil = Settings.Misc.NoRecoil
+Settings.Combat.NoSpread = Settings.Misc.NoSpread
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 4: ДАННЫЕ ОБ ОРУЖИИ
+-- ████████████████████████████████████████████████████████████
+local WeaponType = {
+    Primary = {
+        "AKMN", "M4A1", "M4", "MP5SD", "SVD", "R700", "PKM", "Mosin", "FN-FAL", "SKS",
+        "AKM Improvised", "ADAR", "AS Val", "PPSH", "Saiga", "IZh-81", "IZh-12", "RPG-7",
+        "Task Force Zero MOD-98", "R700",
+    },
+    Secondary = {
+        "M9", "M9A1", "G17", "G18", "M1911", "Desert Eagle", "TT-33", "MP-443", "Five-seveN", "USP",
+    },
+}
+
+local AmmoData = {}
+pcall(function()
+    local ammoTypes = ReplicatedStorage:FindFirstChild("AmmoTypes")
+    if ammoTypes then
+        for _, ammo in ipairs(ammoTypes:GetChildren()) do
+            AmmoData[ammo.Name] = {
+                Damage = ammo:GetAttribute("Damage"),
+                ArmorPen = ammo:GetAttribute("ArmorPen"),
+                MuzzleVelocity = ammo:GetAttribute("MuzzleVelocity"),
+            }
+        end
+    end
+end)
+
+local weaponToAmmo = {
+    ["AKMN"] = "762x39AP",
+    ["M4A1"] = "556x45Tracer",
+    ["M4"] = "556x45Tracer",
+    ["556"] = "556x45Tracer",
+    ["MP5SD"] = "9x18AP",
+    ["SVD"] = "762x54AP",
+    ["R700"] = "762x51AP",
+    ["PKM"] = "762x54R AP",
+    ["Mosin"] = "762x54R AP",
+    ["FN-FAL"] = "762x51 T",
+    ["SKS"] = "762x39 T",
+    ["AKM Improvised"] = "762x39 T",
+    ["ADAR"] = "556x45 T",
+    ["AS Val"] = "9x39 AP",
+    ["PPSH"] = "7.62x25 T",
+    ["Saiga"] = "12ga AP-20",
+    ["IZh-81"] = "12ga Slug",
+    ["IZh-12"] = "12ga Buckshot",
+    ["RPG-7"] = "PG-7V",
+    ["Task Force Zero MOD-98"] = "338LM T",
+    ["R700"] = "338LM T",
+    ["M9"] = "9x19 T",
+    ["M9A1"] = "9x19 AP",
+    ["G17"] = "9x19 T",
+    ["G18"] = "9x19 AP",
+    ["M1911"] = "45 Super T",
+    ["Desert Eagle"] = "50 AE",
+    ["TT-33"] = "7.62x25 T",
+    ["MP-443"] = "9x19 AP",
+    ["Five-seveN"] = "5.7x28",
+    ["USP"] = "45 Super T",
+}
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 5: ФУНКЦИИ ДЛЯ ИНФОРМАЦИИ ОБ ИГРОКЕ (оружие)
+-- ████████████████████████████████████████████████████████████
+local function isPrimaryWeapon(weaponName)
+    for _, name in ipairs(WeaponType.Primary) do
+        if weaponName:find(name, 1, true) then return true end
+    end
+    return false
+end
+
+local function isSecondaryWeapon(weaponName)
+    for _, name in ipairs(WeaponType.Secondary) do
+        if weaponName:find(name, 1, true) then return true end
+    end
+    return false
+end
+
+local function GetPlayerWeaponInfo(plr)
+    local now = tick()
+    if Settings.WeaponCache[plr] and (now - Settings.WeaponCache[plr].timestamp) < Settings.WEAPON_CACHE_DURATION then
+        return Settings.WeaponCache[plr].primary, Settings.WeaponCache[plr].secondary
+    end
+
+    local primaryWeapon, secondaryWeapon = "", ""
+    local primaryDamage, primaryPen, secondaryDamage, secondaryPen = 0, 0, 0, 0
+    local char = plr.Character
+
+    local function isWeapon(obj)
+        if not obj then return false end
+        if obj:IsA("Tool") then return true end
+        if obj:IsA("Model") and obj:FindFirstChild("Handle") then return true end
+        for pattern in pairs(weaponToAmmo) do
+            if obj.Name:find(pattern, 1, true) then return true end
+        end
+        return false
+    end
+
+    local function getWeaponDamage(weaponObj)
+        if not weaponObj then return 0, 0 end
+        local ammoType
+        pcall(function()
+            ammoType = weaponObj:GetAttribute("AmmoType")
+        end)
+        if not ammoType then
+            local ammoObj = weaponObj:FindFirstChild("Ammo")
+            if ammoObj then
+                if ammoObj:IsA("StringValue") or ammoObj:IsA("NumberValue") then
+                    ammoType = ammoObj.Value
+                else
+                    ammoType = ammoObj.Name
+                end
+            end
+        end
+        if ammoType and AmmoData[ammoType] then
+            return AmmoData[ammoType].Damage or 0, AmmoData[ammoType].ArmorPen or 0
+        end
+        for weaponPattern, ammoKey in pairs(weaponToAmmo) do
+            if weaponObj.Name:find(weaponPattern, 1, true) then
+                if AmmoData[ammoKey] then
+                    return AmmoData[ammoKey].Damage or 0, AmmoData[ammoKey].ArmorPen or 0
+                end
+            end
+        end
+        return 0, 0
+    end
+
+    if char then
+        local weapons = {}
+        for _, child in ipairs(char:GetChildren()) do
+            if isWeapon(child) and not child:IsA("Accessory") then
+                table.insert(weapons, child)
+            end
+        end
+        for _, weapon in ipairs(weapons) do
+            local name = weapon.Name
+            if isPrimaryWeapon(name) then
+                primaryWeapon = name
+                primaryDamage, primaryPen = getWeaponDamage(weapon)
+            elseif isSecondaryWeapon(name) then
+                secondaryWeapon = name
+                secondaryDamage, secondaryPen = getWeaponDamage(weapon)
+            end
+        end
+    end
+
+    local cache = {
+        primary = { name = primaryWeapon, damage = primaryDamage, pen = primaryPen },
+        secondary = { name = secondaryWeapon, damage = secondaryDamage, pen = secondaryPen },
+        timestamp = now
+    }
+    Settings.WeaponCache[plr] = cache
+    return cache.primary, cache.secondary
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 6: ФУНКЦИЯ ДЛЯ БОССОВ (исправленная)
+-- ████████████████████████████████████████████████████████████
+local function IsBoss(character)
+    if not character then return false, nil end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false, nil end
+
+    local nameLower = character.Name:lower()
+    for bossName in pairs(Settings.BossNames) do
+        if nameLower:find(bossName:lower(), 1, true) then
+            return true, bossName
+        end
+    end
+
+    if humanoid.MaxHealth > 150 then
+        if nameLower:find("dozer") or nameLower:find("heavy") then
+            return true, "Dozer"
+        elseif nameLower:find("anton") or nameLower:find("bandit") then
+            return true, "Anton"
+        else
+            return true, "Unknown Boss"
+        end
+    end
+
+    return false, nil
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 7: ФУНКЦИЯ ПРОВЕРКИ ВИДИМОСТИ (с кэшем)
+-- ████████████████████████████████████████████████████████████
+local visibilityCache = {}
+
+local function IsTargetVisible(targetPart, targetChar)
+    if not targetPart or not targetChar then return false end
+
+    local now = tick()
+    local cacheKey = targetChar
+    if visibilityCache[cacheKey] and now - visibilityCache[cacheKey].timestamp < Settings.CACHE_DURATION then
+        return visibilityCache[cacheKey].visible
+    end
+
+    local origin = Camera.CFrame.Position
+    local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+    local ignoreList = {LocalPlayer.Character, targetChar, Camera}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character ~= targetChar then
+            table.insert(ignoreList, plr.Character)
+        end
+    end
+    for grenade, _ in pairs(Settings.FlashGrenades) do
+        if grenade and typeof(grenade) == "Instance" then
+            table.insert(ignoreList, grenade)
+        end
+    end
+
+    raycastParams.FilterDescendantsInstances = ignoreList
+    raycastParams.IgnoreWater = true
+
+    local result = Workspace:Raycast(origin, direction, raycastParams)
+    local visible = (result == nil)
+
+    visibilityCache[cacheKey] = { visible = visible, timestamp = now }
+    return visible
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 8: СОЗДАНИЕ ESP ОБЪЕКТОВ (игроки и боссы)
+-- ████████████████████████████████████████████████████████████
+local function CreateESPForPlayer(plr)
+    if Settings.ESPObjects[plr] then return end
+    local esp = {}
+    esp.Player = plr
+
+    esp.BoxOutline = Drawing.new("Square")
+    esp.BoxOutline.Thickness = 1
+    esp.BoxOutline.Color = COLORS.WHITE
+    esp.BoxOutline.Filled = false
+    esp.BoxOutline.Visible = false
+
+    esp.HealthBg = Drawing.new("Square")
+    esp.HealthBg.Filled = true
+    esp.HealthBg.Color = COLORS.BLACK
+    esp.HealthBg.Transparency = 0.5
+    esp.HealthBg.Visible = false
+
+    esp.HealthFill = Drawing.new("Square")
+    esp.HealthFill.Filled = true
+    esp.HealthFill.Color = COLORS.HEALTH_GREEN
+    esp.HealthFill.Visible = false
+
+    esp.NameText = Drawing.new("Text")
+    esp.NameText.Size = 16
+    esp.NameText.Center = true
+    esp.NameText.Outline = true
+    esp.NameText.Color = COLORS.NAME_COLOR
+    esp.NameText.Visible = false
+
+    esp.DistanceText = Drawing.new("Text")
+    esp.DistanceText.Size = 12
+    esp.DistanceText.Center = true
+    esp.DistanceText.Outline = true
+    esp.DistanceText.Color = COLORS.DISTANCE_COLOR
+    esp.DistanceText.Visible = false
+
+    esp.PrimaryWeaponText = Drawing.new("Text")
+    esp.PrimaryWeaponText.Size = 12
+    esp.PrimaryWeaponText.Center = true
+    esp.PrimaryWeaponText.Outline = true
+    esp.PrimaryWeaponText.Color = COLORS.WEAPON_COLOR
+    esp.PrimaryWeaponText.Visible = false
+
+    esp.SecondaryWeaponText = Drawing.new("Text")
+    esp.SecondaryWeaponText.Size = 12
+    esp.SecondaryWeaponText.Center = true
+    esp.SecondaryWeaponText.Outline = true
+    esp.SecondaryWeaponText.Color = COLORS.SECONDARY_WEAPON_COLOR
+    esp.SecondaryWeaponText.Visible = false
+
+    esp.Tracer = Drawing.new("Line")
+    esp.Tracer.Thickness = 1
+    esp.Tracer.Color = COLORS.WHITE
+    esp.Tracer.Visible = false
+
+    Settings.ESPObjects[plr] = esp
+end
+
+local function CreateESPForBoss(character, bossName)
+    if Settings.ESPBossObjects[character] then return end
+    local esp = {}
+    esp.Character = character
+    esp.Name = bossName
+
+    esp.BoxOutline = Drawing.new("Square")
+    esp.BoxOutline.Thickness = 1
+    esp.BoxOutline.Color = COLORS.BOSS_INVISIBLE
+    esp.BoxOutline.Filled = false
+    esp.BoxOutline.Visible = false
+
+    esp.HealthBg = Drawing.new("Square")
+    esp.HealthBg.Filled = true
+    esp.HealthBg.Color = COLORS.BLACK
+    esp.HealthBg.Transparency = 0.5
+    esp.HealthBg.Visible = false
+
+    esp.HealthFill = Drawing.new("Square")
+    esp.HealthFill.Filled = true
+    esp.HealthFill.Color = COLORS.HEALTH_GREEN
+    esp.HealthFill.Visible = false
+
+    esp.NameText = Drawing.new("Text")
+    esp.NameText.Size = 18
+    esp.NameText.Center = true
+    esp.NameText.Outline = true
+    esp.NameText.Color = COLORS.BOSS_INVISIBLE
+    esp.NameText.Visible = false
+
+    esp.DistanceText = Drawing.new("Text")
+    esp.DistanceText.Size = 12
+    esp.DistanceText.Center = true
+    esp.DistanceText.Outline = true
+    esp.DistanceText.Color = COLORS.DISTANCE_COLOR
+    esp.DistanceText.Visible = false
+
+    esp.HealthText = Drawing.new("Text")
+    esp.HealthText.Size = 12
+    esp.HealthText.Center = true
+    esp.HealthText.Outline = true
+    esp.HealthText.Color = COLORS.HEALTH_GREEN
+    esp.HealthText.Visible = false
+
+    Settings.ESPBossObjects[character] = esp
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 9: ИНИЦИАЛИЗАЦИЯ ESP ДЛЯ ИГРОКОВ
+-- ████████████████████████████████████████████████████████████
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr ~= LocalPlayer then
+        CreateESPForPlayer(plr)
+    end
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    if plr ~= LocalPlayer then
+        CreateESPForPlayer(plr)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+    if Settings.ESPObjects[plr] then
+        local esp = Settings.ESPObjects[plr]
+        esp.BoxOutline:Remove()
+        esp.HealthBg:Remove()
+        esp.HealthFill:Remove()
+        esp.NameText:Remove()
+        esp.DistanceText:Remove()
+        esp.PrimaryWeaponText:Remove()
+        esp.SecondaryWeaponText:Remove()
+        esp.Tracer:Remove()
+        Settings.ESPObjects[plr] = nil
+    end
+    Settings.WeaponCache[plr] = nil
+    Settings.VisibilityCache[plr] = nil
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    Settings.lastTool = nil
+end)
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 10: ОТСЛЕЖИВАНИЕ БОССОВ
+-- ████████████████████████████████████████████████████████████
+local function onPossibleBossAdded(obj)
+    if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+        local isBoss, bossName = IsBoss(obj)
+        if isBoss then
+            CreateESPForBoss(obj, bossName or "Boss")
+        end
+    end
+end
+
+Workspace.DescendantAdded:Connect(onPossibleBossAdded)
+for _, obj in ipairs(Workspace:GetDescendants()) do
+    onPossibleBossAdded(obj)
+end
+
+Workspace.DescendantRemoving:Connect(function(obj)
+    if Settings.ESPBossObjects[obj] then
+        local esp = Settings.ESPBossObjects[obj]
+        esp.BoxOutline:Remove()
+        esp.HealthBg:Remove()
+        esp.HealthFill:Remove()
+        esp.NameText:Remove()
+        esp.DistanceText:Remove()
+        esp.HealthText:Remove()
+        Settings.ESPBossObjects[obj] = nil
+    end
+end)
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 11: ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+-- ████████████████████████████████████████████████████████████
+local function ApplyNightVision(enable)
+    if enable then
+        Lighting.Ambient = Color3.new(0.7, 0.7, 0.7)
+        Lighting.Brightness = 1.5
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.new(0.7, 0.7, 0.7)
+    else
+        Lighting.Ambient = Settings.OriginalLighting.Ambient
+        Lighting.Brightness = Settings.OriginalLighting.Brightness
+        Lighting.GlobalShadows = Settings.OriginalLighting.GlobalShadows
+        Lighting.OutdoorAmbient = Settings.OriginalLighting.OutdoorAmbient
+    end
+end
+
+local function ApplyFPSBoost(enable)
+    if enable then
+        settings():GetService("RenderSettings").QualityLevel = 1
+        if not _G.FPSBoostWarned then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "GGshop XENO",
+                Text = "⚠️ FPS Boost включён! Дальность прорисовки снижена.",
+                Duration = 3
+            })
+            _G.FPSBoostWarned = true
+        end
+    else
+        settings():GetService("RenderSettings").QualityLevel = 10
+    end
+end
+
+local function ApplyNoRecoilSpread()
+    if not (Settings.Combat.NoRecoil or Settings.Combat.NoSpread or Settings.Combat.NoJumpSpread) then return end
+
+    local char = LocalPlayer.Character
+    if not char then return end
+    local tool = char:FindFirstChildOfClass("Tool")
+    if not tool then return end
+
+    local attrsToZero = {"Recoil", "RecoilStrength", "Spread", "kick", "shake"}
+    for _, attr in ipairs(attrsToZero) do
+        pcall(function()
+            if Settings.Combat.NoRecoil and (attr:find("Recoil") or attr:find("kick") or attr:find("shake")) then
+                tool:SetAttribute(attr, 0)
+            end
+            if Settings.Combat.NoSpread and attr:find("Spread") then
+                tool:SetAttribute(attr, 0)
+            end
+        end)
+    end
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 12: ФУНКЦИИ COMBAT (AntiSniper, BulletTracers, TargetHealth и т.д.)
+-- ████████████████████████████████████████████████████████████
+local targetHealthText = Drawing.new("Text")
+targetHealthText.Size = Settings.Combat.TargetHealth.FontSize
+targetHealthText.Center = true
+targetHealthText.Outline = true
+targetHealthText.Color = Settings.Combat.TargetHealth.Color
+targetHealthText.Visible = false
+local lastTargetHealth = 0
+
+local lastWarningTime = 0
+local warningText = Drawing.new("Text")
+warningText.Size = Settings.Combat.AntiSniper.WarningSize
+warningText.Center = true
+warningText.Outline = true
+warningText.Color = Settings.Combat.AntiSniper.WarningColor
+warningText.Visible = false
+
+local function checkIfBeingAimed()
+    if not Settings.Combat.AntiSniper.Enabled then return nil end
+    local myChar = LocalPlayer.Character
+    if not myChar then return nil end
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return nil end
+    local myPos = myRoot.Position
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr == LocalPlayer then continue end
+        local char = plr.Character
+        if not char then continue end
+        local head = char:FindFirstChild("Head")
+        if not head then continue end
+        local lookVector = head.CFrame.LookVector
+        local dirToMe = (myPos - head.Position).Unit
+        local dot = lookVector:Dot(dirToMe)
+        if dot < Settings.Combat.AntiSniper.Sensitivity then continue end
+        local dist = (head.Position - myPos).Magnitude
+        if dist > Settings.Combat.AntiSniper.Range then continue end
+
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        raycastParams.FilterDescendantsInstances = {char, myChar, Camera}
+        local result = Workspace:Raycast(head.Position, dirToMe * dist, raycastParams)
+        if not result then
+            return plr
+        end
+    end
+    return nil
+end
+
+local tracerPool = {}
+local function getTracerLine()
+    for _, line in ipairs(tracerPool) do
+        if not line.Visible then
+            line.Visible = true
+            return line
+        end
+    end
+    local line = Drawing.new("Line")
+    line.Thickness = Settings.Combat.BulletTracers.Thickness
+    line.Color = Settings.Combat.BulletTracers.Color
+    table.insert(tracerPool, line)
+    return line
+end
+
+local function addTracer(startPos, endPos)
+    if not Settings.Combat.BulletTracers.Enabled then return end
+    task.spawn(function()
+        local line = getTracerLine()
+        local fromScreen = Camera:WorldToViewportPoint(startPos)
+        local toScreen = Camera:WorldToViewportPoint(endPos)
+        line.From = Vector2.new(fromScreen.X, fromScreen.Y)
+        line.To = Vector2.new(toScreen.X, toScreen.Y)
+        line.Visible = true
+        task.wait(Settings.Combat.BulletTracers.Duration)
+        line.Visible = false
+    end)
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 13: ФУНКЦИИ HvH (AntiAim)
+-- ████████████████████████████████████████████████████████████
+local yawAngle = 0
+local jitterFlip = 1
+local lastAntiAimUpdate = 0
+
+local function ApplyAntiAim()
+    local shouldApply = Settings.HvH.Enabled or (Settings.HvH.AutoAntiAimOnHit.Enabled and tick() < Settings.hitAntiAimUntil)
+    if not shouldApply then return end
+
+    if Settings.Aimbot.Enabled and Settings.holdingKey then
+        return
+    end
+
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local pitchVal = 0
+    local yawVal = 0
+    local now = tick()
+
+    if Settings.HvH.AntiAim.Pitch.Enabled then
+        local mode = Settings.HvH.AntiAim.Pitch.Mode
+        if mode == "Static" then
+            pitchVal = math.rad(Settings.HvH.AntiAim.Pitch.Value)
+        elseif mode == "Down" then
+            pitchVal = math.rad(89)
+        elseif mode == "Up" then
+            pitchVal = math.rad(-89)
+        elseif mode == "Random" then
+            pitchVal = math.rad(math.random(-89, 89))
+        elseif mode == "Jitter" then
+            pitchVal = math.rad(math.random(-30, 30) + math.sin(now * 10) * 10)
+        end
+    elseif tick() < Settings.hitAntiAimUntil then
+        pitchVal = math.rad(math.random(-45, 45))
+    end
+
+    if Settings.HvH.AntiAim.Yaw.Enabled then
+        local mode = Settings.HvH.AntiAim.Yaw.Mode
+        if mode == "Static" then
+            yawVal = math.rad(Settings.HvH.AntiAim.Yaw.Value)
+        elseif mode == "Spin" then
+            yawAngle = (yawAngle + math.rad(Settings.HvH.AntiAim.Yaw.Speed * 2)) % (2 * math.pi)
+            yawVal = yawAngle
+        elseif mode == "Jitter" then
+            local jitter = math.rad(Settings.HvH.AntiAim.Yaw.JitterRange)
+            yawVal = math.rad(math.random(-Settings.HvH.AntiAim.Yaw.JitterRange, Settings.HvH.AntiAim.Yaw.JitterRange)) 
+                     + math.sin(now * 15) * jitter * 0.5
+        elseif mode == "Backwards" then
+            yawVal = math.rad(180)
+        elseif mode == "Random" then
+            yawVal = math.rad(math.random(-180, 180))
+        elseif mode == "FakeSpin" then
+            yawAngle = (yawAngle + math.rad(Settings.HvH.AntiAim.Yaw.Speed * 1.5)) % (2 * math.pi)
+            if math.random() > 0.7 then
+                yawVal = yawAngle + math.rad(math.random(-45, 45))
+            else
+                yawVal = yawAngle
+            end
+        end
+    elseif tick() < Settings.hitAntiAimUntil then
+        yawVal = math.rad(math.random(-90, 90))
+    end
+
+    root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, yawVal, 0) * CFrame.Angles(pitchVal, 0, 0)
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 14: ФУНКЦИИ AIMBOT (GetClosestBoss, GetClosestTarget)
+-- ████████████████████████████████████████████████████████████
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = Settings.Aimbot.FOVSettings.Thickness
+fovCircle.NumSides = 64
+fovCircle.Color = Settings.Aimbot.FOVSettings.Color
+fovCircle.Transparency = Settings.Aimbot.FOVSettings.Transparency
+fovCircle.Visible = false
+
+local lockedTarget = nil
+
+local function GetClosestBoss()
+    if not Settings.BotsAim.Enabled then return nil end
+    local mousePos = UserInputService:GetMouseLocation()
+    local closest, closestDist = nil, Settings.BotsAim.MaxDistance * 2
+
+    for char, esp in pairs(Settings.ESPBossObjects) do
+        if not char.Parent then continue end
+        local isBoss, bossName = IsBoss(char)
+        if not isBoss then continue end
+
+        if bossName == "Dozer" and not Settings.BotsAim.TargetDozer then continue end
+        if bossName == "Anton" and not Settings.BotsAim.TargetAnton then continue end
+
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if not humanoid or humanoid.Health <= 0 then continue end
+
+        local targetPart = char:FindFirstChild(Settings.BotsAim.LockPart) or char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+        if not targetPart then continue end
+
+        if Settings.Aimbot.WallCheck then
+            local origin = Camera.CFrame.Position
+            local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+            raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, char, Camera}
+            local result = Workspace:Raycast(origin, direction, raycastParams)
+            if result then continue end
+        end
+
+        local worldDist = (Camera.CFrame.Position - targetPart.Position).Magnitude
+        if worldDist > Settings.BotsAim.MaxDistance then continue end
+
+        local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+        if not onScreen then continue end
+
+        local screenPos = Vector2.new(pos.X, pos.Y)
+        local dist = (screenPos - mousePos).Magnitude
+        if dist < closestDist then
+            closestDist = dist
+            closest = targetPart
+        end
+    end
+    return closest
+end
+
+local function GetClosestTarget()
+    if not Settings.Aimbot.Enabled then return nil end
+    local mousePos = UserInputService:GetMouseLocation()
+    local closest, closestDist = nil, Settings.Aimbot.FOV
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr == LocalPlayer then continue end
+        if Settings.Aimbot.TeamCheck and plr.Team == LocalPlayer.Team then continue end
+        local char = plr.Character
+        if not char then continue end
+        local part = char:FindFirstChild(Settings.Aimbot.LockPart) or char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+        if not part then continue end
+        if Settings.Aimbot.WallCheck then
+            if not IsTargetVisible(part, char) then continue end
+        end
+        if Settings.Aimbot.AliveCheck then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if not hum or hum.Health <= 0 then continue end
+        end
+        local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+        if not onScreen then continue end
+        local screenPos = Vector2.new(pos.X, pos.Y)
+        local dist = (screenPos - mousePos).Magnitude
+        if dist < closestDist then
+            closestDist = dist
+            closest = part
+        end
+    end
+
+    if Settings.BotsAim.Enabled then
+        for char, esp in pairs(Settings.ESPBossObjects) do
+            if not char.Parent then continue end
+            local isBoss, bossName = IsBoss(char)
+            if not isBoss then continue end
+
+            if bossName == "Dozer" and not Settings.BotsAim.TargetDozer then continue end
+            if bossName == "Anton" and not Settings.BotsAim.TargetAnton then continue end
+
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then continue end
+
+            local targetPart = char:FindFirstChild(Settings.Aimbot.LockPart) or char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+            if not targetPart then continue end
+
+            if Settings.Aimbot.WallCheck then
+                local origin = Camera.CFrame.Position
+                local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
+                local raycastParams = RaycastParams.new()
+                raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, char, Camera}
+                local result = Workspace:Raycast(origin, direction, raycastParams)
+                if result then continue end
+            end
+
+            local worldDist = (Camera.CFrame.Position - targetPart.Position).Magnitude
+            if worldDist > Settings.BotsAim.MaxDistance then continue end
+
+            local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+            if not onScreen then continue end
+
+            local screenPos = Vector2.new(pos.X, pos.Y)
+            local dist = (screenPos - mousePos).Magnitude
+            if dist < closestDist then
+                closestDist = dist
+                closest = targetPart
+            end
+        end
+    end
+
+    return closest
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 15: FAKELAG, TRIGGERBOT
+-- ████████████████████████████████████████████████████████████
+local function StartFakeLag()
+    if not Settings.FakeLag.Enabled then return end
+    if Settings.isLagging then return end
+
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    Settings.originalWalkSpeed = humanoid.WalkSpeed
+    humanoid.WalkSpeed = 0
+
+    Settings.isLagging = true
+    Settings.lagEndTime = tick() + Settings.FakeLag.Duration
+end
+
+local function StopFakeLag()
+    if not Settings.isLagging then return end
+
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = Settings.originalWalkSpeed
+        end
+    end
+
+    Settings.isLagging = false
+end
+
+local keyMap = {
+    MouseButton2 = Enum.UserInputType.MouseButton2,
+    MouseButton1 = Enum.UserInputType.MouseButton1,
+    MouseButton3 = Enum.UserInputType.MouseButton3,
+    X = Enum.KeyCode.X,
+    C = Enum.KeyCode.C,
+    V = Enum.KeyCode.V,
+}
+
+local function GetTargetUnderCrosshair()
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+
+    local ray = Camera:ViewportPointToRay(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local result = Workspace:Raycast(ray.Origin, ray.Direction * Settings.Triggerbot.Range, params)
+
+    if result and result.Instance then
+        local hitPart = result.Instance
+        local character = hitPart.Parent
+        local player = Players:GetPlayerFromCharacter(character)
+
+        if player and player ~= LocalPlayer then
+            if Settings.Triggerbot.TeamCheck and player.Team == LocalPlayer.Team then
+                return nil
+            end
+
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then
+                return nil
+            end
+
+            if Settings.Triggerbot.WallCheck then
+                local head = character:FindFirstChild("Head")
+                if head and not IsTargetVisible(head, character) then
+                    return nil
+                end
+            end
+
+            if Settings.Triggerbot.Hitbox ~= "Any" then
+                if hitPart.Name ~= Settings.Triggerbot.Hitbox and not hitPart.Name:find(Settings.Triggerbot.Hitbox) then
+                    return nil
+                end
+            end
+
+            return player, hitPart
+        end
+    end
+    return nil
+end
+
+local lastShotTime = 0
+
+local function Shoot()
+    local now = tick()
+    if now - lastShotTime < Settings.Triggerbot.Delay then
+        return
+    end
+
+    VirtualInputManager:SendMouseButtonEvent(
+        Camera.ViewportSize.X/2,
+        Camera.ViewportSize.Y/2,
+        0, true, game, 1
+    )
+    VirtualInputManager:SendMouseButtonEvent(
+        Camera.ViewportSize.X/2,
+        Camera.ViewportSize.Y/2,
+        0, false, game, 1
+    )
+
+    lastShotTime = now
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 16: ХИТМАРКЕР
+-- ████████████████████████████████████████████████████████████
+local hitmarkerPool = {}
+local function getHitmarkerText()
+    for _, text in ipairs(hitmarkerPool) do
+        if not text.Visible then
+            text.Visible = true
+            return text
+        end
+    end
+    local text = Drawing.new("Text")
+    text.Font = 2
+    text.Outline = true
+    text.Size = 14
+    text.Color = COLORS.WHITE
+    table.insert(hitmarkerPool, text)
+    return text
+end
+
+local function addHitmarker(text, isHeadshot, damage)
+    task.spawn(function()
+        local marker = getHitmarkerText()
+        marker.Text = text
+        marker.Position = Vector2.new(50, Camera.ViewportSize.Y / 2)
+
+        local yOffset = 0
+        for _, m in ipairs(hitmarkerPool) do
+            if m.Visible and m ~= marker then
+                yOffset = yOffset + 20
+            end
+        end
+        marker.Position = Vector2.new(50, Camera.ViewportSize.Y / 2 + yOffset)
+
+        if (isHeadshot and Settings.HitmarkerHeadshotSound) or (not isHeadshot and Settings.HitmarkerSound) then
+            pcall(function()
+                local sound = Instance.new("Sound")
+                sound.SoundId = Settings.HitmarkerSoundId
+                sound.Parent = workspace
+                sound:Play()
+                game:GetService("Debris"):AddItem(sound, 2)
+            end)
+        end
+
+        if Settings.DamageIndicator.Enabled and damage and damage > 0 then
+            local dmgText = getHitmarkerText()
+            dmgText.Text = "-" .. damage
+            dmgText.Color = Settings.DamageIndicator.Color
+            dmgText.Size = Settings.DamageIndicator.Size
+            dmgText.Position = Vector2.new(
+                Camera.ViewportSize.X * Settings.DamageIndicator.Position.X,
+                Camera.ViewportSize.Y * Settings.DamageIndicator.Position.Y
+            )
+            task.delay(Settings.DamageIndicator.Duration, function()
+                dmgText.Visible = false
+            end)
+        end
+
+        task.wait(2)
+        marker.Visible = false
+    end)
+end
+
+local hitRemotes = {}
+local function findAllHitRemotes()
+    local possibleNames = {
+        "ProjectileInflict", "Hit", "Damage", "BulletHit", "InflictDamage",
+        "HitPart", "HitMarker", "OnHit", "ProjectileHit", "DamageIndicator"
+    }
+    for _, name in ipairs(possibleNames) do
+        local remote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild(name)
+        if remote and remote:IsA("RemoteEvent") then
+            table.insert(hitRemotes, remote)
+        end
+    end
+    for _, v in pairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") and not table.find(hitRemotes, v) then
+            local nameLower = v.Name:lower()
+            if nameLower:find("hit") or nameLower:find("inflict") or nameLower:find("damage") or nameLower:find("hurt") then
+                table.insert(hitRemotes, v)
+            end
+        end
+    end
+    if #hitRemotes == 0 then
+        warn("Хитмаркер: не найдено ни одного remote-события.")
+    else
+        print("Найдено remote-событий для попаданий:", #hitRemotes)
+    end
+end
+
+findAllHitRemotes()
+
+for _, remote in ipairs(hitRemotes) do
+    remote.OnClientEvent:Connect(function(...)
+        local args = {...}
+        local targetPlayer
+        local hitPart
+        local damage = 0
+
+        for i, arg in ipairs(args) do
+            if type(arg) == "userdata" and typeof(arg) == "Instance" and arg:IsA("Player") then
+                targetPlayer = arg
+            elseif type(arg) == "string" and (arg:find("Head") or arg:find("Torso") or arg:find("Leg")) then
+                hitPart = arg
+            elseif type(arg) == "number" and damage == 0 then
+                damage = arg
+            end
+        end
+
+        if targetPlayer then
+            if targetPlayer == LocalPlayer then
+                if Settings.HvH.AutoAntiAimOnHit.Enabled then
+                    Settings.hitAntiAimUntil = tick() + Settings.HvH.AutoAntiAimOnHit.Duration
+                end
+            else
+                local partName = tostring(hitPart):gsub("Enum.HitPart.", "")
+                local isHead = partName == "Head" or (type(hitPart) == "string" and hitPart:lower():find("head"))
+                local hitText = string.format("→ %s (%s)", targetPlayer.Name, partName)
+                addHitmarker(hitText, isHead, damage)
+
+                if Settings.Combat.BulletTracers.Enabled then
+                    local hitPos
+                    if targetPlayer.Character then
+                        local part = targetPlayer.Character:FindFirstChild("Head") or targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if part then hitPos = part.Position end
+                    end
+                    if hitPos then
+                        addTracer(Camera.CFrame.Position, hitPos)
+                    end
+                end
+            end
+        elseif hitPart then
+            addHitmarker("→ " .. tostring(hitPart), false, damage)
+        else
+            addHitmarker("→ Hit!", false, damage)
+        end
+    end)
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 17: ОБРАБОТЧИКИ КЛАВИШ
+-- ████████████████████████████████████████████████████████████
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    local key = Settings.Aimbot.TriggerKey
+    if (input.UserInputType == key or input.KeyCode == key) and Settings.Aimbot.Enabled then
+        Settings.holdingKey = true
+    end
+
+    if Settings.FakeLag.Enabled and input.KeyCode == Settings.FakeLag.Key then
+        StartFakeLag()
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gpe)
+    if gpe then return end
+    local key = Settings.Aimbot.TriggerKey
+    if (input.UserInputType == key or input.KeyCode == key) then
+        Settings.holdingKey = false
+        lockedTarget = nil
+    end
+
+    if Settings.FakeLag.Enabled and input.KeyCode == Settings.FakeLag.Key then
+        StopFakeLag()
+    end
+end)
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 18: ФУНКЦИИ ESP (обновление)
+-- ████████████████████████████████████████████████████████████
+local function UpdateESP()
+    local espSet = Settings.ESP
+    local viewportSize = Camera.ViewportSize
+
+    if espSet.Enabled then
+        local myTeam = LocalPlayer.Team
+        for plr, esp in pairs(Settings.ESPObjects) do
+            if plr == LocalPlayer then continue end
+            local char = plr.Character
+            local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+            if not (char and rootPart and humanoid and humanoid.Health > 0) then
+                esp.BoxOutline.Visible = false
+                esp.HealthBg.Visible = false
+                esp.HealthFill.Visible = false
+                esp.NameText.Visible = false
+                esp.DistanceText.Visible = false
+                esp.PrimaryWeaponText.Visible = false
+                esp.SecondaryWeaponText.Visible = false
+                esp.Tracer.Visible = false
+                continue
+            end
+
+            if espSet.TeamCheck and plr.Team == myTeam then
+                esp.BoxOutline.Visible = false
+                esp.HealthBg.Visible = false
+                esp.HealthFill.Visible = false
+                esp.NameText.Visible = false
+                esp.DistanceText.Visible = false
+                esp.PrimaryWeaponText.Visible = false
+                esp.SecondaryWeaponText.Visible = false
+                esp.Tracer.Visible = false
+                continue
+            end
+
+            local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
+            if dist > espSet.MaxDistance then
+                esp.BoxOutline.Visible = false
+                esp.HealthBg.Visible = false
+                esp.HealthFill.Visible = false
+                esp.NameText.Visible = false
+                esp.DistanceText.Visible = false
+                esp.PrimaryWeaponText.Visible = false
+                esp.SecondaryWeaponText.Visible = false
+                esp.Tracer.Visible = false
+                continue
+            end
+
+            local visible = true
+            if espSet.VisCheck then
+                local head = char:FindFirstChild("Head")
+                if head then visible = IsTargetVisible(head, char) end
+            end
+
+            local healthPercent = humanoid.Health / humanoid.MaxHealth
+            local healthColor = COLORS.VISIBLE_GREEN:Lerp(COLORS.INVISIBLE_RED, 1 - healthPercent)
+            local outlineColor = visible and COLORS.VISIBLE_GREEN or COLORS.INVISIBLE_RED
+            local nameColor = visible and espSet.Name.Color or COLORS.INVISIBLE_RED
+            local distanceColor = visible and COLORS.DISTANCE_COLOR or COLORS.INVISIBLE_RED
+            local primaryColor = visible and espSet.Weapon.Color or COLORS.INVISIBLE_RED
+            local secondaryColor = visible and espSet.SecondaryWeapon.Color or COLORS.INVISIBLE_RED
+
+            if espSet.Box.Enabled and espSet.Box.Outline then
+                local head = char:FindFirstChild("Head")
+                if head then
+                    local headVec, onScreenHead = Camera:WorldToViewportPoint(head.Position + Vector3.new(0,0.5,0))
+                    local footVec, onScreenFoot = Camera:WorldToViewportPoint(rootPart.Position - Vector3.new(0,2.5,0))
+                    if onScreenHead and onScreenFoot then
+                        local height = math.abs(headVec.Y - footVec.Y)
+                        local width = height * 0.5
+                        local centerX = headVec.X
+                        local boxPos = Vector2.new(centerX - width/2, math.min(headVec.Y, footVec.Y))
+
+                        esp.BoxOutline.Position = boxPos
+                        esp.BoxOutline.Size = Vector2.new(width, height)
+                        esp.BoxOutline.Color = outlineColor
+                        esp.BoxOutline.Visible = true
+                    else
+                        esp.BoxOutline.Visible = false
+                    end
+                else
+                    esp.BoxOutline.Visible = false
+                end
+            else
+                esp.BoxOutline.Visible = false
+            end
+
+            if espSet.HealthBar.Enabled then
+                if esp.BoxOutline.Visible then
+                    local boxPos = esp.BoxOutline.Position
+                    local boxSize = esp.BoxOutline.Size
+                    local barWidth = 4
+                    local barX = (espSet.HealthBar.Position == "Left") and (boxPos.X - barWidth - 2) or (boxPos.X + boxSize.X + 2)
+                    local barPos = Vector2.new(barX, boxPos.Y)
+                    local barHeight = boxSize.Y
+
+                    esp.HealthBg.Position = barPos
+                    esp.HealthBg.Size = Vector2.new(barWidth, barHeight)
+                    esp.HealthBg.Visible = true
+
+                    local fillHeight = barHeight * healthPercent
+                    esp.HealthFill.Position = Vector2.new(barPos.X, barPos.Y + barHeight - fillHeight)
+                    esp.HealthFill.Size = Vector2.new(barWidth, fillHeight)
+                    esp.HealthFill.Color = healthColor
+                    esp.HealthFill.Visible = true
+                else
+                    esp.HealthBg.Visible = false
+                    esp.HealthFill.Visible = false
+                end
+            else
+                esp.HealthBg.Visible = false
+                esp.HealthFill.Visible = false
+            end
+
+            local head = char:FindFirstChild("Head")
+            if head then
+                local headVec, onScreenHead = Camera:WorldToViewportPoint(head.Position + Vector3.new(0,0.5,0))
+                if onScreenHead then
+                    local boxTopY = esp.BoxOutline.Visible and esp.BoxOutline.Position.Y or headVec.Y - 50
+
+                    if espSet.Weapon.Enabled then
+                        local primary, secondary = GetPlayerWeaponInfo(plr)
+                        if primary.name ~= "" then
+                            local weaponText = primary.name
+                            if espSet.Weapon.ShowAmmo and primary.damage > 0 then
+                                weaponText = weaponText .. string.format(" [%d", primary.damage)
+                                if primary.pen > 0 then
+                                    weaponText = weaponText .. "|" .. primary.pen
+                                end
+                                weaponText = weaponText .. "]"
+                            end
+                            esp.PrimaryWeaponText.Text = weaponText
+                            esp.PrimaryWeaponText.Position = Vector2.new(headVec.X, boxTopY - 36)
+                            esp.PrimaryWeaponText.Color = primaryColor
+                            esp.PrimaryWeaponText.Visible = true
+                        else
+                            esp.PrimaryWeaponText.Visible = false
+                        end
+
+                        if secondary.name ~= "" then
+                            local weaponText = secondary.name
+                            if espSet.SecondaryWeapon.ShowAmmo and secondary.damage > 0 then
+                                weaponText = weaponText .. string.format(" [%d", secondary.damage)
+                                if secondary.pen > 0 then
+                                    weaponText = weaponText .. "|" .. secondary.pen
+                                end
+                                weaponText = weaponText .. "]"
+                            end
+                            esp.SecondaryWeaponText.Text = weaponText
+                            esp.SecondaryWeaponText.Position = Vector2.new(headVec.X, boxTopY + 4)
+                            esp.SecondaryWeaponText.Color = secondaryColor
+                            esp.SecondaryWeaponText.Visible = true
+                        else
+                            esp.SecondaryWeaponText.Visible = false
+                        end
+                    else
+                        esp.PrimaryWeaponText.Visible = false
+                        esp.SecondaryWeaponText.Visible = false
+                    end
+
+                    if espSet.Name.Enabled then
+                        local nameText = plr.Name
+                        if espSet.Name.ShowHealth then
+                            nameText = nameText .. string.format(" [%d HP]", math.floor(humanoid.Health))
+                        end
+                        if espSet.Name.ShowDistance then
+                            nameText = nameText .. string.format(" (%dm)", math.floor(dist))
+                        end
+                        esp.NameText.Text = nameText
+                        esp.NameText.Position = Vector2.new(headVec.X, boxTopY - 18)
+                        esp.NameText.Color = nameColor
+                        esp.NameText.Visible = true
+                    else
+                        esp.NameText.Visible = false
+                    end
+
+                    if not espSet.Name.ShowDistance and espSet.Name.Enabled then
+                        esp.DistanceText.Text = string.format("%dm", math.floor(dist))
+                        esp.DistanceText.Position = Vector2.new(headVec.X, boxTopY - 36)
+                        esp.DistanceText.Color = distanceColor
+                        esp.DistanceText.Visible = true
+                    else
+                        esp.DistanceText.Visible = false
+                    end
+                else
+                    esp.NameText.Visible = false
+                    esp.DistanceText.Visible = false
+                    esp.PrimaryWeaponText.Visible = false
+                    esp.SecondaryWeaponText.Visible = false
+                end
+            else
+                esp.NameText.Visible = false
+                esp.DistanceText.Visible = false
+                esp.PrimaryWeaponText.Visible = false
+                esp.SecondaryWeaponText.Visible = false
+            end
+
+            if espSet.Tracer.Enabled and esp.BoxOutline.Visible then
+                local head = char:FindFirstChild("Head")
+                if head then
+                    local headVec, onScreenHead = Camera:WorldToViewportPoint(head.Position)
+                    if onScreenHead then
+                        esp.Tracer.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
+                        esp.Tracer.To = Vector2.new(headVec.X, headVec.Y)
+                        esp.Tracer.Color = outlineColor
+                        esp.Tracer.Visible = true
+                    else
+                        esp.Tracer.Visible = false
+                    end
+                else
+                    esp.Tracer.Visible = false
+                end
+            else
+                esp.Tracer.Visible = false
+            end
+        end
+    else
+        for plr, esp in pairs(Settings.ESPObjects) do
+            esp.BoxOutline.Visible = false
+            esp.HealthBg.Visible = false
+            esp.HealthFill.Visible = false
+            esp.NameText.Visible = false
+            esp.DistanceText.Visible = false
+            esp.PrimaryWeaponText.Visible = false
+            esp.SecondaryWeaponText.Visible = false
+            esp.Tracer.Visible = false
+        end
+    end
+
+    if espSet.Boss.Enabled then
+        for char, esp in pairs(Settings.ESPBossObjects) do
+            if not char.Parent then
+                esp.BoxOutline.Visible = false
+                esp.HealthBg.Visible = false
+                esp.HealthFill.Visible = false
+                esp.NameText.Visible = false
+                esp.DistanceText.Visible = false
+                esp.HealthText.Visible = false
+                continue
+            end
+            local rootPart = char:FindFirstChild("HumanoidRootPart")
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if not (rootPart and humanoid and humanoid.Health > 0) then
+                esp.BoxOutline.Visible = false
+                esp.HealthBg.Visible = false
+                esp.HealthFill.Visible = false
+                esp.NameText.Visible = false
+                esp.DistanceText.Visible = false
+                esp.HealthText.Visible = false
+                continue
+            end
+
+            local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
+            if dist > espSet.MaxDistance then
+                esp.BoxOutline.Visible = false
+                esp.HealthBg.Visible = false
+                esp.HealthFill.Visible = false
+                esp.NameText.Visible = false
+                esp.DistanceText.Visible = false
+                esp.HealthText.Visible = false
+                continue
+            end
+
+            local head = char:FindFirstChild("Head")
+            local visible = false
+            if head then
+                visible = IsTargetVisible(head, char)
+            end
+
+            local healthPercent = humanoid.Health / humanoid.MaxHealth
+            local healthColor = COLORS.HEALTH_GREEN:Lerp(COLORS.HEALTH_RED, 1 - healthPercent)
+            local bossColor = visible and espSet.Boss.ColorVisible or espSet.Boss.ColorHidden
+
+            if head then
+                local headVec, onScreenHead = Camera:WorldToViewportPoint(head.Position + Vector3.new(0,0.5,0))
+                local footVec, onScreenFoot = Camera:WorldToViewportPoint(rootPart.Position - Vector3.new(0,2.5,0))
+                if onScreenHead and onScreenFoot then
+                    local height = math.abs(headVec.Y - footVec.Y)
+                    local width = height * 0.5
+                    local centerX = headVec.X
+                    local boxPos = Vector2.new(centerX - width/2, math.min(headVec.Y, footVec.Y))
+
+                    esp.BoxOutline.Position = boxPos
+                    esp.BoxOutline.Size = Vector2.new(width, height)
+                    esp.BoxOutline.Color = bossColor
+                    esp.BoxOutline.Visible = true
+                else
+                    esp.BoxOutline.Visible = false
+                end
+            else
+                esp.BoxOutline.Visible = false
+            end
+
+            if esp.BoxOutline.Visible then
+                local boxPos = esp.BoxOutline.Position
+                local boxSize = esp.BoxOutline.Size
+                local barWidth = 4
+                local barX = boxPos.X - barWidth - 2
+                local barPos = Vector2.new(barX, boxPos.Y)
+                local barHeight = boxSize.Y
+
+                esp.HealthBg.Position = barPos
+                esp.HealthBg.Size = Vector2.new(barWidth, barHeight)
+                esp.HealthBg.Visible = true
+
+                local fillHeight = barHeight * healthPercent
+                esp.HealthFill.Position = Vector2.new(barPos.X, barPos.Y + barHeight - fillHeight)
+                esp.HealthFill.Size = Vector2.new(barWidth, fillHeight)
+                esp.HealthFill.Color = healthColor
+                esp.HealthFill.Visible = true
+
+                esp.NameText.Text = esp.Name .. string.format(" [%d HP]", math.floor(humanoid.Health))
+                esp.NameText.Position = Vector2.new(headVec.X, boxPos.Y - 18)
+                esp.NameText.Color = bossColor
+                esp.NameText.Visible = true
+
+                esp.DistanceText.Text = string.format("%dm", math.floor(dist))
+                esp.DistanceText.Position = Vector2.new(headVec.X, boxPos.Y + boxSize.Y + 4)
+                esp.DistanceText.Visible = true
+            else
+                esp.HealthBg.Visible = false
+                esp.HealthFill.Visible = false
+                esp.NameText.Visible = false
+                esp.DistanceText.Visible = false
+            end
+        end
+    else
+        for char, esp in pairs(Settings.ESPBossObjects) do
+            esp.BoxOutline.Visible = false
+            esp.HealthBg.Visible = false
+            esp.HealthFill.Visible = false
+            esp.NameText.Visible = false
+            esp.DistanceText.Visible = false
+        end
+    end
+end
+
+-- ==================== КОНЕЦ ЧАСТИ 1 ====================
+-- Скопируйте это в ваш executor и затем скопируйте ЧАСТЬ 2.
+-- ==================== НАЧАЛО ЧАСТИ 2 ====================
+-- Вставьте этот код ПОСЛЕ первой части.
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 19: ADMIN ESP (вынесено в отдельную функцию)
+-- ████████████████████████████████████████████████████████████
+local AdminESPObjects = {}
+
+local function IsPlayerAdmin(plr)
+    if not plr or plr == LocalPlayer then return false end
+    local character = plr.Character
+    if not character then return false end
+    if character:FindFirstChild("AdminTool") or character:FindFirstChild("Staff") then
+        return true
+    end
+    return false
+end
+
+local function CreateESPForAdmin(plr)
+    if AdminESPObjects[plr] then return end
+    local esp = {}
+    esp.Player = plr
+
+    esp.Box = Drawing.new("Square")
+    esp.Box.Thickness = 2
+    esp.Box.Filled = false
+    esp.Box.Visible = false
+
+    esp.Name = Drawing.new("Text")
+    esp.Name.Size = 16
+    esp.Name.Center = true
+    esp.Name.Outline = true
+    esp.Name.Visible = false
+
+    esp.Tracer = Drawing.new("Line")
+    esp.Tracer.Thickness = 1
+    esp.Tracer.Visible = false
+
+    AdminESPObjects[plr] = esp
+end
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr ~= LocalPlayer then
+        CreateESPForAdmin(plr)
+    end
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    if plr ~= LocalPlayer then
+        CreateESPForAdmin(plr)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+    if AdminESPObjects[plr] then
+        AdminESPObjects[plr].Box:Remove()
+        AdminESPObjects[plr].Name:Remove()
+        AdminESPObjects[plr].Tracer:Remove()
+        AdminESPObjects[plr] = nil
+    end
+end)
+
+local function UpdateAdminESP()
+    if not Settings.AdminESP.Enabled then
+        for _, esp in pairs(AdminESPObjects) do
+            esp.Box.Visible = false
+            esp.Name.Visible = false
+            esp.Tracer.Visible = false
+        end
+        return
+    end
+
+    local viewportSize = Camera.ViewportSize
+    for plr, esp in pairs(AdminESPObjects) do
+        local char = plr.Character
+        local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+        local head = char and char:FindFirstChild("Head")
+        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+
+        if not IsPlayerAdmin(plr) or not (char and rootPart and head and humanoid and humanoid.Health > 0) then
+            esp.Box.Visible = false
+            esp.Name.Visible = false
+            esp.Tracer.Visible = false
+            continue
+        end
+
+        local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
+        if dist > Settings.ESP.MaxDistance then
+            esp.Box.Visible = false
+            esp.Name.Visible = false
+            esp.Tracer.Visible = false
+            continue
+        end
+
+        local headPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+        if not onScreen then
+            esp.Box.Visible = false
+            esp.Name.Visible = false
+            esp.Tracer.Visible = false
+            continue
+        end
+
+        local scale = 1 / (headPos.Z * 0.001)
+        local boxSize = Vector2.new(50 * scale, 70 * scale)
+        local boxPos = Vector2.new(headPos.X - boxSize.X/2, headPos.Y - boxSize.Y/2)
+
+        esp.Box.Position = boxPos
+        esp.Box.Size = boxSize
+        esp.Box.Color = Settings.AdminESP.BoxColor
+        esp.Box.Visible = true
+
+        esp.Name.Text = string.format("[ADMIN] %s [%dm]", plr.Name, math.floor(dist))
+        esp.Name.Position = Vector2.new(headPos.X, boxPos.Y - 20)
+        esp.Name.Color = Settings.AdminESP.NameColor
+        esp.Name.Visible = true
+
+        if Settings.AdminESP.Tracer then
+            esp.Tracer.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
+            esp.Tracer.To = Vector2.new(headPos.X, headPos.Y)
+            esp.Tracer.Color = Settings.AdminESP.BoxColor
+            esp.Tracer.Visible = true
+        else
+            esp.Tracer.Visible = false
+        end
+    end
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 20: ОТСЛЕЖИВАНИЕ ГРАНАТ И ВИЗОРОВ
+-- ████████████████████████████████████████████████████████████
+local function onM84Added(grenade)
+    if grenade.Name == "M84" and (grenade:IsA("Part") or grenade:IsA("MeshPart") or grenade:IsA("Model")) then
+        Settings.FlashGrenades[grenade] = true
+        task.spawn(function()
+            pcall(function()
+                for _, child in ipairs(grenade:GetDescendants()) do
+                    if child:IsA("ParticleEmitter") or child:IsA("Sound") or child:IsA("Beam") then
+                        child.Enabled = false
+                    end
+                end
+                if grenade:IsA("Part") then
+                    grenade.Transparency = 1
+                    grenade.CanCollide = false
+                end
+            end)
+        end)
+    end
+end
+
+Workspace.DescendantAdded:Connect(onM84Added)
+for _, obj in ipairs(Workspace:GetDescendants()) do
+    onM84Added(obj)
+end
+
+local function cacheVisor(character)
+    Settings.VisorParts = {}
+    local function scan(inst)
+        for _, child in ipairs(inst:GetChildren()) do
+            local name = child.Name:lower()
+            if (child:IsA("Part") or child:IsA("MeshPart")) and (name:find("visor") or name:find("glass") or name:find("shield")) then
+                table.insert(Settings.VisorParts, child)
+            end
+            scan(child)
+        end
+    end
+    scan(character)
+end
+
+LocalPlayer.CharacterAdded:Connect(cacheVisor)
+if LocalPlayer.Character then cacheVisor(LocalPlayer.Character) end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 21: BULLET PHYSICS (hook)
+-- ████████████████████████████████████████████████████████████
+local oldCreateBullet
+pcall(function()
+    local bulletModule = ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("FPS") and require(ReplicatedStorage.Modules.FPS:FindFirstChild("Bullet"))
+    if bulletModule and bulletModule.CreateBullet then
+        oldCreateBullet = bulletModule.CreateBullet
+        bulletModule.CreateBullet = function(...)
+            local args = {...}
+            if Settings.BulletPhysics.Enabled then
+                if Settings.BulletPhysics.NoGravity then
+                    if args[3] then args[3] = 0 end
+                end
+                if Settings.BulletPhysics.InstantHit then
+                    if args[2] then args[2] = args[2] * 10 end
+                end
+            end
+            return oldCreateBullet(table.unpack(args))
+        end
+    end
+end)
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 22: ВОДЯНОЙ ЗНАК
+-- ████████████████████████████████████████████████████████████
+local watermark = Drawing.new("Text")
+watermark.Visible = true
+watermark.Text = "GGshop XENO ULTIMATE"
+watermark.Size = 18
+watermark.Color = COLORS.PINK_HOT
+watermark.Outline = true
+watermark.OutlineColor = COLORS.PURPLE_DARK
+watermark.Center = true
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 23: ОСНОВНОЙ ЦИКЛ (RenderStepped) - ПОЛНЫЙ
+-- ████████████████████████████████████████████████████████████
+local frameCount = 0
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    local shouldUpdate = (frameCount % Settings.FRAME_SKIP == 0)
+
+    if shouldUpdate then
+        UpdateESP()
+        UpdateAdminESP()
+    end
+
+    ApplyAntiAim()
+
+    if Settings.Aimbot.ShowFOV and Settings.Aimbot.Enabled then
+        local mousePos = UserInputService:GetMouseLocation()
+        fovCircle.Position = mousePos
+        fovCircle.Radius = Settings.Aimbot.FOV
+        fovCircle.Color = Settings.Aimbot.FOVSettings.Color
+        fovCircle.Thickness = Settings.Aimbot.FOVSettings.Thickness
+        fovCircle.Transparency = Settings.Aimbot.FOVSettings.Transparency
+        fovCircle.Visible = true
+    else
+        fovCircle.Visible = false
+    end
+
+    if Settings.holdingKey and Settings.Aimbot.Enabled then
+        local target = GetClosestTarget()
+        if target then
+            local targetPos = target.Position
+            local currentCF = Camera.CFrame
+            local newCF = CFrame.lookAt(currentCF.Position, targetPos)
+            Camera.CFrame = currentCF:Lerp(newCF, Settings.Aimbot.Smoothness)
+        end
+    end
+
+    if Settings.isLagging and tick() >= Settings.lagEndTime then
+        StopFakeLag()
+    end
+
+    -- Target Health
+    if Settings.Combat.TargetHealth.Enabled then
+        local aimTarget = GetClosestTarget()
+        if aimTarget then
+            local char = aimTarget.Parent
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                local health = hum.Health
+                if health ~= lastTargetHealth then
+                    lastTargetHealth = health
+                    targetHealthText.Text = string.format("HP: %d", health)
+                end
+                local viewportSize = Camera.ViewportSize
+                local pos = (Settings.Combat.TargetHealth.Position == "BelowCrosshair")
+                    and Vector2.new(viewportSize.X / 2, viewportSize.Y / 2 + 40)
+                    or Vector2.new(20, 40)
+                targetHealthText.Position = pos
+                targetHealthText.Size = Settings.Combat.TargetHealth.FontSize
+                targetHealthText.Color = Settings.Combat.TargetHealth.Color
+                targetHealthText.Visible = true
+            else
+                targetHealthText.Visible = false
+            end
+        else
+            targetHealthText.Visible = false
+        end
+    else
+        targetHealthText.Visible = false
+    end
+
+    -- AntiSniper
+    if Settings.Combat.AntiSniper.Enabled then
+        local now = tick()
+        if now - lastWarningTime > Settings.Combat.AntiSniper.Cooldown then
+            local aimingPlayer = checkIfBeingAimed()
+            if aimingPlayer then
+                lastWarningTime = now
+                local warningTextContent = Settings.Combat.AntiSniper.WarningText
+                if Settings.Combat.AntiSniper.ShowName then
+                    warningTextContent = warningTextContent .. "\n" .. aimingPlayer.Name
+                end
+                warningText.Text = warningTextContent
+                local viewportSize = Camera.ViewportSize
+                warningText.Position = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2 - 100)
+                warningText.Size = Settings.Combat.AntiSniper.WarningSize
+                warningText.Color = Settings.Combat.AntiSniper.WarningColor
+                warningText.Visible = true
+                if Settings.Combat.AntiSniper.Sound then
+                    pcall(function()
+                        local sound = Instance.new("Sound")
+                        sound.SoundId = Settings.HitmarkerSoundId
+                        sound.Parent = workspace
+                        sound:Play()
+                        game:GetService("Debris"):AddItem(sound, 1)
+                    end)
+                end
+                task.delay(1, function() warningText.Visible = false end)
+            else
+                warningText.Visible = false
+            end
+        end
+    else
+        warningText.Visible = false
+    end
+
+    -- Triggerbot
+    if Settings.Triggerbot.Enabled then
+        local key = keyMap[Settings.Triggerbot.Key]
+        local isKeyDown = false
+        if key then
+            if key.EnumType == Enum.KeyCode then
+                isKeyDown = UserInputService:IsKeyDown(key)
+            else
+                isKeyDown = UserInputService:IsMouseButtonPressed(key)
+            end
+        end
+
+        if isKeyDown then
+            local target = GetTargetUnderCrosshair()
+            if target then
+                Shoot()
+            end
+        end
+    end
+
+    if shouldUpdate then
+        ApplyNoRecoilSpread()
+    end
+
+    if Settings.Visuals.NoFlash then
+        for grenade in pairs(Settings.FlashGrenades) do
+            if grenade and grenade.Parent then
+                for _, child in ipairs(grenade:GetDescendants()) do
+                    if child:IsA("ParticleEmitter") or child:IsA("Sound") then
+                        child.Enabled = false
+                    end
+                end
+            else
+                Settings.FlashGrenades[grenade] = nil
+            end
+        end
+    end
+
+    if Settings.Visuals.NoVisor then
+        for _, visor in ipairs(Settings.VisorParts) do
+            if visor and visor.Parent then
+                visor.LocalTransparencyModifier = 1
+            end
+        end
+    end
+
+    if frameCount % 1000 == 0 then
+        local now = tick()
+        for k, v in pairs(visibilityCache) do
+            if now - v.timestamp > 10 then visibilityCache[k] = nil end
+        end
+        for k, v in pairs(Settings.VisibilityCache) do
+            if now - v.timestamp > 10 then Settings.VisibilityCache[k] = nil end
+        end
+        for k, v in pairs(Settings.WeaponCache) do
+            if now - v.timestamp > 10 then Settings.WeaponCache[k] = nil end
+        end
+    end
+
+    local viewportSize = Camera.ViewportSize
+    local fps = math.floor(1 / RunService.RenderStepped:Wait())
+    watermark.Text = string.format("GGshop XENO ULTIMATE | FPS: %d", fps)
+    watermark.Position = Vector2.new(viewportSize.X / 2, 40)
+end)
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 24: МЕНЮ (полный код)
+-- ████████████████████████████████████████████████████████████
+local tooltip = Drawing.new("Text")
+tooltip.Size = 18
+tooltip.Font = 2
+tooltip.Outline = true
+tooltip.Color = COLORS.WHITE
+tooltip.Visible = false
+
+local function createToggle(parent, settingTable, settingKey, displayName, desc, beta)
+    beta = beta or false
+    local btnFrame = Instance.new("Frame")
+    btnFrame.Parent = parent
+    btnFrame.BackgroundColor3 = COLORS.GRAY_MED
+    btnFrame.BackgroundTransparency = 0.3
+    btnFrame.Size = UDim2.new(1, -10, 0, 45)
+    btnFrame.BorderSizePixel = 0
+
+    local label = Instance.new("TextLabel")
+    label.Parent = btnFrame
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(0.6, -10, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Text = displayName
+    label.TextColor3 = COLORS.WHITE
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 16
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    if desc then
+        local d = Instance.new("TextLabel")
+        d.Parent = btnFrame
+        d.BackgroundTransparency = 1
+        d.Size = UDim2.new(0.6, -10, 1, 0)
+        d.Position = UDim2.new(0, 10, 0, 20)
+        d.Text = desc
+        d.TextColor3 = COLORS.PINK_HOT
+        d.Font = Enum.Font.Gotham
+        d.TextSize = 12
+        d.TextXAlignment = Enum.TextXAlignment.Left
+    end
+
+    local state = Instance.new("TextLabel")
+    state.Parent = btnFrame
+    state.BackgroundTransparency = 1
+    state.Size = UDim2.new(0.4, -10, 1, 0)
+    state.Position = UDim2.new(0.6, 0, 0, 0)
+    state.Font = Enum.Font.GothamBold
+    state.TextSize = 16
+
+    local function updateState()
+        local val = settingTable[settingKey]
+        if beta then
+            state.Text = val and "BETA!!" or "false"
+        else
+            state.Text = tostring(val)
+        end
+        state.TextColor3 = val and COLORS.PINK_HOT or COLORS.INVISIBLE_RED
+    end
+    updateState()
+
+    local btn = Instance.new("TextButton")
+    btn.Parent = btnFrame
+    btn.BackgroundTransparency = 1
+    btn.Size = UDim2.new(1, 0, 1, 0)
+    btn.Text = ""
+
+    btn.MouseEnter:Connect(function()
+        if desc and desc ~= "" then
+            tooltip.Text = desc
+            local mousePos = UserInputService:GetMouseLocation()
+            tooltip.Position = Vector2.new(mousePos.X + 15, mousePos.Y + 15)
+            tooltip.Visible = true
+        end
+    end)
+    btn.MouseLeave:Connect(function()
+        tooltip.Visible = false
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        settingTable[settingKey] = not settingTable[settingKey]
+        updateState()
+        if settingTable == Settings.Misc and settingKey == "NightVision" then
+            ApplyNightVision(Settings.Misc.NightVision)
+        end
+        if settingTable == Settings.Misc and settingKey == "FPSBoost" then
+            ApplyFPSBoost(Settings.Misc.FPSBoost)
+        end
+    end)
+end
+
+local function createSlider(parent, settingTable, settingKey, displayName, min, max, format)
+    local sFrame = Instance.new("Frame")
+    sFrame.Parent = parent
+    sFrame.BackgroundColor3 = COLORS.GRAY_MED
+    sFrame.BackgroundTransparency = 0.3
+    sFrame.Size = UDim2.new(1, -10, 0, 60)
+    sFrame.BorderSizePixel = 0
+
+    local label = Instance.new("TextLabel")
+    label.Parent = sFrame
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, -20, 0, 20)
+    label.Position = UDim2.new(0, 10, 0, 5)
+    label.Text = displayName .. ": " .. tostring(settingTable[settingKey]) .. (format or "")
+    label.TextColor3 = COLORS.WHITE
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
+
+    local slider = Instance.new("Frame")
+    slider.Parent = sFrame
+    slider.BackgroundColor3 = COLORS.GRAY_DARK
+    slider.Size = UDim2.new(1, -30, 0, 6)
+    slider.Position = UDim2.new(0, 15, 0, 35)
+
+    local fill = Instance.new("Frame")
+    fill.Parent = slider
+    fill.BackgroundColor3 = COLORS.PINK_HOT
+    fill.Size = UDim2.new((settingTable[settingKey] - min) / (max - min), 0, 1, 0)
+    fill.BorderSizePixel = 0
+
+    local btn = Instance.new("TextButton")
+    btn.Parent = sFrame
+    btn.BackgroundTransparency = 1
+    btn.Size = UDim2.new(1, 0, 1, 0)
+    btn.Text = ""
+
+    local desc = displayName .. " (" .. min .. " - " .. max .. ")"
+    btn.MouseEnter:Connect(function()
+        tooltip.Text = desc
+        local mousePos = UserInputService:GetMouseLocation()
+        tooltip.Position = Vector2.new(mousePos.X + 15, mousePos.Y + 15)
+        tooltip.Visible = true
+    end)
+    btn.MouseLeave:Connect(function()
+        tooltip.Visible = false
+    end)
+
+    local dragging = false
+    btn.MouseButton1Down:Connect(function() dragging = true end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    btn.MouseMoved:Connect(function()
+        if dragging then
+            local mousePos = UserInputService:GetMouseLocation()
+            local absPos = slider.AbsolutePosition
+            local relX = math.clamp(mousePos.X - absPos.X, 0, slider.AbsoluteSize.X)
+            local value = min + (relX / slider.AbsoluteSize.X) * (max - min)
+            value = math.floor(value * 10) / 10
+            settingTable[settingKey] = value
+            fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
+            label.Text = displayName .. ": " .. tostring(value) .. (format or "")
+        end
+    end)
+end
+
+local function createCombo(parent, settingTable, settingKey, displayName, options)
+    local cFrame = Instance.new("Frame")
+    cFrame.Parent = parent
+    cFrame.BackgroundColor3 = COLORS.GRAY_MED
+    cFrame.BackgroundTransparency = 0.3
+    cFrame.Size = UDim2.new(1, -10, 0, 45)
+    cFrame.BorderSizePixel = 0
+
+    local label = Instance.new("TextLabel")
+    label.Parent = cFrame
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(0.5, -10, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Text = displayName
+    label.TextColor3 = COLORS.WHITE
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 16
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local btn = Instance.new("TextButton")
+    btn.Parent = cFrame
+    btn.Size = UDim2.new(0.4, -10, 1, -10)
+    btn.Position = UDim2.new(0.6, 0, 0, 5)
+    btn.BackgroundColor3 = COLORS.GRAY_DARK
+    btn.TextColor3 = COLORS.PINK_HOT
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.Text = tostring(settingTable[settingKey])
+
+    btn.MouseEnter:Connect(function()
+        tooltip.Text = "Выберите значение из списка"
+        local mousePos = UserInputService:GetMouseLocation()
+        tooltip.Position = Vector2.new(mousePos.X + 15, mousePos.Y + 15)
+        tooltip.Visible = true
+    end)
+    btn.MouseLeave:Connect(function()
+        tooltip.Visible = false
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        local cur = btn.Text
+        local idx = 1
+        for i, opt in ipairs(options) do if opt == cur then idx = i; break end end
+        local nextIdx = idx % #options + 1
+        local newVal = options[nextIdx]
+        btn.Text = newVal
+        settingTable[settingKey] = newVal
+    end)
+end
+
+local function createKeybind(parent, settingTable, settingKey, displayName)
+    local btnFrame = Instance.new("Frame")
+    btnFrame.Parent = parent
+    btnFrame.BackgroundColor3 = COLORS.GRAY_MED
+    btnFrame.BackgroundTransparency = 0.3
+    btnFrame.Size = UDim2.new(1, -10, 0, 35)
+    btnFrame.BorderSizePixel = 0
+
+    local label = Instance.new("TextLabel")
+    label.Parent = btnFrame
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(0.5, -10, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Text = displayName
+    label.TextColor3 = COLORS.WHITE
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local btn = Instance.new("TextButton")
+    btn.Parent = btnFrame
+    btn.Size = UDim2.new(0.4, -10, 1, -5)
+    btn.Position = UDim2.new(0.5, 0, 0, 2)
+    btn.BackgroundColor3 = COLORS.GRAY_DARK
+    btn.TextColor3 = COLORS.PINK_HOT
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.Text = tostring(settingTable[settingKey]):gsub("Enum.UserInputType.", ""):gsub("Enum.KeyCode.", "")
+
+    btn.MouseEnter:Connect(function()
+        tooltip.Text = "Нажмите, затем нажмите клавишу для привязки"
+        local mousePos = UserInputService:GetMouseLocation()
+        tooltip.Position = Vector2.new(mousePos.X + 15, mousePos.Y + 15)
+        tooltip.Visible = true
+    end)
+    btn.MouseLeave:Connect(function()
+        tooltip.Visible = false
+    end)
+
+    local listening = false
+    btn.MouseButton1Click:Connect(function()
+        listening = true
+        btn.Text = "..."
+        task.wait(0.1)
+    end)
+
+    UserInputService.InputBegan:Connect(function(input, gpe)
+        if listening and not gpe then
+            listening = false
+            local key = input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode or input.UserInputType
+            settingTable[settingKey] = key
+            btn.Text = tostring(key):gsub("Enum.UserInputType.", ""):gsub("Enum.KeyCode.", "")
+        end
+    end)
+end
+
+local function createColorPicker(parent, settingTable, settingKey, displayName)
+    local btnFrame = Instance.new("Frame")
+    btnFrame.Parent = parent
+    btnFrame.BackgroundColor3 = COLORS.GRAY_MED
+    btnFrame.BackgroundTransparency = 0.3
+    btnFrame.Size = UDim2.new(1, -10, 0, 35)
+    btnFrame.BorderSizePixel = 0
+
+    local label = Instance.new("TextLabel")
+    label.Parent = btnFrame
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(0.6, -10, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Text = displayName
+    label.TextColor3 = COLORS.WHITE
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local colorDisplay = Instance.new("Frame")
+    colorDisplay.Parent = btnFrame
+    colorDisplay.Size = UDim2.new(0, 20, 0, 20)
+    colorDisplay.Position = UDim2.new(0.8, 0, 0, 7)
+    colorDisplay.BackgroundColor3 = settingTable[settingKey] or COLORS.WHITE
+
+    local btn = Instance.new("TextButton")
+    btn.Parent = btnFrame
+    btn.BackgroundTransparency = 1
+    btn.Size = UDim2.new(1, 0, 1, 0)
+    btn.Text = ""
+    btn.MouseButton1Click:Connect(function()
+        local r = math.random()
+        local g = math.random()
+        local b = math.random()
+        local newColor = Color3.new(r, g, b)
+        settingTable[settingKey] = newColor
+        colorDisplay.BackgroundColor3 = newColor
+    end)
+end
+
+-- ████████████████████████████████████████████████████████████
+-- СОЗДАНИЕ GUI
+-- ████████████████████████████████████████████████████████████
+local gui = Instance.new("ScreenGui")
+gui.Name = "GGshopXenoMenu"
+gui.Parent = CoreGui
+gui.Enabled = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.IgnoreGuiInset = true
+
+local uiScale = Instance.new("UIScale")
+uiScale.Parent = gui
+uiScale.Scale = 0
+
+local frame = Instance.new("Frame")
+frame.Name = "MainFrame"
+frame.Parent = gui
+frame.BackgroundColor3 = COLORS.BLACK
+frame.BackgroundTransparency = 0.3
+frame.BorderSizePixel = 0
+frame.Size = UDim2.new(0, 1050, 0, 700)
+frame.Position = UDim2.new(0.5, -525, 0.5, -350)
+frame.Active = true
+frame.ClipsDescendants = true
+
+local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local scaleTweenIn = TweenService:Create(uiScale, tweenInfo, {Scale = 1})
+local scaleTweenOut = TweenService:Create(uiScale, tweenInfo, {Scale = 0})
+
+local border = Instance.new("Frame")
+border.Name = "BorderGlow"
+border.Parent = frame
+border.BackgroundColor3 = COLORS.WHITE
+border.BackgroundTransparency = 1
+border.BorderSizePixel = 0
+border.Size = UDim2.new(1, 4, 1, 4)
+border.Position = UDim2.new(0, -2, 0, -2)
+border.ZIndex = -1
+
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, COLORS.PINK_HOT),
+    ColorSequenceKeypoint.new(0.33, COLORS.PURPLE_MED),
+    ColorSequenceKeypoint.new(0.66, COLORS.PURPLE_DARK),
+    ColorSequenceKeypoint.new(1, COLORS.DARK_BLUE)
+})
+gradient.Rotation = 45
+gradient.Parent = border
+
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Parent = frame
+titleBar.BackgroundColor3 = COLORS.BLACK
+titleBar.BackgroundTransparency = 0.5
+titleBar.BorderSizePixel = 0
+titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.Position = UDim2.new(0, 0, 0, 0)
+
+local title = Instance.new("TextLabel")
+title.Parent = titleBar
+title.BackgroundTransparency = 1
+title.Size = UDim2.new(1, -50, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.Text = "GGshop XENO ULTIMATE"
+title.TextColor3 = COLORS.WHITE
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Font = Enum.Font.GothamBold
+title.TextSize = 24
+title.TextStrokeTransparency = 1
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Parent = titleBar
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -35, 0, 5)
+closeBtn.BackgroundColor3 = COLORS.PINK_HOT
+closeBtn.BackgroundTransparency = 0.4
+closeBtn.Text = "X"
+closeBtn.TextColor3 = COLORS.WHITE
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 18
+closeBtn.BorderSizePixel = 0
+closeBtn.MouseButton1Click:Connect(function()
+    Settings.MenuOpen = false
+    scaleTweenOut:Play()
+    task.delay(0.3, function() gui.Enabled = false end)
+end)
+
+local tabContainer = Instance.new("Frame")
+tabContainer.Parent = frame
+tabContainer.BackgroundColor3 = COLORS.BLACK
+tabContainer.BackgroundTransparency = 0.5
+tabContainer.BorderSizePixel = 0
+tabContainer.Size = UDim2.new(1, 0, 0, 45)
+tabContainer.Position = UDim2.new(0, 0, 0, 40)
+
+local tabs = {"Aimbot", "Bots Aim", "ESP", "ESP(A)", "Combat", "HvH 👾", "Fake Lag", "Trigger ⚡", "Damage", "Misc"}
+local tabButtons = {}
+local currentTab = "Aimbot"
+
+local function setTabCorner(btn, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius)
+    for _, child in ipairs(btn:GetChildren()) do
+        if child:IsA("UICorner") then
+            child:Destroy()
+        end
+    end
+    corner.Parent = btn
+end
+
+for i, tabName in ipairs(tabs) do
+    local btn = Instance.new("TextButton")
+    btn.Parent = tabContainer
+    btn.Size = UDim2.new(0, math.floor(1050/#tabs), 1, -5)
+    btn.Position = UDim2.new(0, (i-1)*math.floor(1050/#tabs), 0, 2)
+    btn.BackgroundColor3 = (tabName == currentTab) and COLORS.PINK_HOT or COLORS.GRAY_MED
+    btn.BackgroundTransparency = 0.3
+    btn.Text = tabName
+    btn.TextColor3 = COLORS.WHITE
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 16
+    btn.BorderSizePixel = 0
+    btn.ClipsDescendants = true
+
+    if tabName == currentTab then
+        setTabCorner(btn, 10)
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        currentTab = tabName
+        for _, b in ipairs(tabButtons) do
+            b.BackgroundColor3 = COLORS.GRAY_MED
+            local tween = TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.GRAY_MED})
+            tween:Play()
+            setTabCorner(b, 0)
+        end
+        btn.BackgroundColor3 = COLORS.PINK_HOT
+        local tween = TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.PINK_HOT})
+        tween:Play()
+        setTabCorner(btn, 10)
+        updateTabContent(tabName)
+    end)
+    table.insert(tabButtons, btn)
+end
+
+local content = Instance.new("Frame")
+content.Parent = frame
+content.BackgroundColor3 = COLORS.BLACK
+content.BackgroundTransparency = 0.5
+content.BorderSizePixel = 0
+content.Size = UDim2.new(1, -20, 1, -105)
+content.Position = UDim2.new(0, 10, 0, 90)
+
+local scrollingFrame = Instance.new("ScrollingFrame")
+scrollingFrame.Parent = content
+scrollingFrame.BackgroundColor3 = COLORS.GRAY_DARK
+scrollingFrame.BackgroundTransparency = 0.3
+scrollingFrame.BorderSizePixel = 0
+scrollingFrame.Size = UDim2.new(1, 0, 1, 0)
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 2, 0)
+scrollingFrame.ScrollBarThickness = 8
+scrollingFrame.ScrollBarImageColor3 = COLORS.PINK_HOT
+
+local layout = Instance.new("UIListLayout")
+layout.Parent = scrollingFrame
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Padding = UDim.new(0, 5)
+
+local guideOpen = false
+local guideFrame = nil
+
+function updateTabContent(tab)
+    for _, child in ipairs(scrollingFrame:GetChildren()) do
+        if child ~= layout then child:Destroy() end
+    end
+
+    if tab == "Aimbot" then
+        createToggle(scrollingFrame, Settings.Aimbot, "Enabled", "Aimbot Enabled", "Вкл/Выкл")
+        createCombo(scrollingFrame, Settings.Aimbot, "LockPart", "Target Part", {"Head", "HumanoidRootPart", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"})
+        createSlider(scrollingFrame, Settings.Aimbot, "Smoothness", "Smoothness", 0.01, 1, "")
+        createSlider(scrollingFrame, Settings.Aimbot, "FOV", "FOV Radius", 10, 300, "px")
+        createToggle(scrollingFrame, Settings.Aimbot, "ShowFOV", "Show FOV Circle", "Показывать круг прицеливания")
+        createToggle(scrollingFrame, Settings.Aimbot, "TeamCheck", "Team Check", "Не целиться в тиммейтов")
+        createToggle(scrollingFrame, Settings.Aimbot, "WallCheck", "Wall Check", "Стрелять только по видимым врагам")
+        createToggle(scrollingFrame, Settings.Aimbot, "AliveCheck", "Alive Check", "Не целиться в мёртвых")
+        createKeybind(scrollingFrame, Settings.Aimbot, "TriggerKey", "Trigger Key")
+        createColorPicker(scrollingFrame, Settings.Aimbot.FOVSettings, "Color", "FOV Circle Color")
+        createSlider(scrollingFrame, Settings.Aimbot.FOVSettings, "Thickness", "FOV Thickness", 1, 5, "px")
+        createSlider(scrollingFrame, Settings.Aimbot.FOVSettings, "Transparency", "FOV Transparency", 0, 1, "")
+
+    elseif tab == "Bots Aim" then
+        createToggle(scrollingFrame, Settings.BotsAim, "Enabled", "Bots Aimbot Enabled", "Вкл/Выкл аим на боссов")
+        createCombo(scrollingFrame, Settings.BotsAim, "LockPart", "Target Part", {"Head", "HumanoidRootPart", "Torso"})
+        createSlider(scrollingFrame, Settings.BotsAim, "MaxDistance", "Max Distance", 100, 1000, "m")
+        createToggle(scrollingFrame, Settings.BotsAim, "TargetDozer", "Target Dozer", "Целиться в Дозера")
+        createToggle(scrollingFrame, Settings.BotsAim, "TargetAnton", "Target Anton", "Целиться в Антона")
+
+    elseif tab == "ESP" then
+        createToggle(scrollingFrame, Settings.ESP, "Enabled", "ESP Enabled", "Включить ESP")
+        createSlider(scrollingFrame, Settings.ESP, "MaxDistance", "Max Distance", 100, 2000, "m")
+        createToggle(scrollingFrame, Settings.ESP.Box, "Enabled", "Box", "Показывать бокс вокруг игрока")
+        createToggle(scrollingFrame, Settings.ESP.Box, "Outline", "Box Outline", "Обводка бокса")
+        createToggle(scrollingFrame, Settings.ESP.HealthBar, "Enabled", "Health Bar", "Полоска здоровья")
+        createCombo(scrollingFrame, Settings.ESP.HealthBar, "Position", "Health Bar Position", {"Left", "Right"})
+        createToggle(scrollingFrame, Settings.ESP.Name, "Enabled", "Name", "Показывать имя игрока")
+        createToggle(scrollingFrame, Settings.ESP.Name, "ShowHealth", "Show Health in Name", "Показывать здоровье в имени")
+        createToggle(scrollingFrame, Settings.ESP.Name, "ShowDistance", "Show Distance", "Показывать дистанцию")
+        createToggle(scrollingFrame, Settings.ESP.Weapon, "Enabled", "Weapon (primary)", "Показывать основное оружие")
+        createToggle(scrollingFrame, Settings.ESP.Weapon, "ShowAmmo", "Show Ammo (primary)", "Показывать урон/пробитие")
+        createToggle(scrollingFrame, Settings.ESP.SecondaryWeapon, "Enabled", "Secondary Weapon", "Показывать вторичное оружие")
+        createToggle(scrollingFrame, Settings.ESP.SecondaryWeapon, "ShowAmmo", "Show Ammo (secondary)", "")
+        createToggle(scrollingFrame, Settings.ESP.Boss, "Enabled", "Boss ESP", "Подсветка боссов")
+        createToggle(scrollingFrame, Settings.ESP, "VisCheck", "VisCheck", "Менять цвет в зависимости от видимости")
+        createToggle(scrollingFrame, Settings.ESP, "TeamCheck", "Team Check", "Не показывать тиммейтов")
+        createToggle(scrollingFrame, Settings.ESP.Tracer, "Enabled", "Tracer", "Линии от центра экрана")
+
+    elseif tab == "ESP(A)" then
+        createToggle(scrollingFrame, Settings.AdminESP, "Enabled", "Admin ESP Enabled", "Показывать админов")
+        createToggle(scrollingFrame, Settings.AdminESP, "ShowInvisible", "Reveal Invisible Admins", "Показывать силуэты невидимых админов")
+        createColorPicker(scrollingFrame, Settings.AdminESP, "BoxColor", "Box Color")
+        createColorPicker(scrollingFrame, Settings.AdminESP, "NameColor", "Name Color")
+        createToggle(scrollingFrame, Settings.AdminESP, "Tracer", "Tracer", "Линия до админа")
+
+        local sep = Instance.new("TextLabel")
+        sep.Parent = scrollingFrame
+        sep.BackgroundTransparency = 1
+        sep.Size = UDim2.new(1, -10, 0, 20)
+        sep.Text = "--- VISUALS ---"
+        sep.TextColor3 = COLORS.PINK_HOT
+        sep.Font = Enum.Font.GothamBold
+        sep.TextSize = 14
+        createToggle(scrollingFrame, Settings.Visuals, "NoFlash", "No Flashbang", "Отключает эффект вспышки от гранат M84")
+        createToggle(scrollingFrame, Settings.Visuals, "NoVisor", "No Visor Darkening", "Убирает затемнение от шлемов")
+
+        local sep2 = Instance.new("TextLabel")
+        sep2.Parent = scrollingFrame
+        sep2.BackgroundTransparency = 1
+        sep2.Size = UDim2.new(1, -10, 0, 20)
+        sep2.Text = "--- BULLET PHYSICS ---"
+        sep2.TextColor3 = COLORS.PINK_HOT
+        sep2.Font = Enum.Font.GothamBold
+        sep2.TextSize = 14
+        createToggle(scrollingFrame, Settings.BulletPhysics, "Enabled", "Enable Bullet Tweak", "Включить модификацию пуль")
+        createToggle(scrollingFrame, Settings.BulletPhysics, "NoGravity", "No Gravity (Laser)", "Пули летят прямо, без падения")
+        createToggle(scrollingFrame, Settings.BulletPhysics, "InstantHit", "Instant Hit (Fast)", "Пули летят очень быстро")
+
+    elseif tab == "Combat" then
+        createToggle(scrollingFrame, Settings.Combat.TargetHealth, "Enabled", "Target Health", "Показывать здоровье цели")
+        createCombo(scrollingFrame, Settings.Combat.TargetHealth, "Position", "Health Position", {"BelowCrosshair", "TopLeft"})
+        createSlider(scrollingFrame, Settings.Combat.TargetHealth, "FontSize", "Font Size", 10, 30, "px")
+        createColorPicker(scrollingFrame, Settings.Combat.TargetHealth, "Color", "Color")
+
+        createToggle(scrollingFrame, Settings.Combat.AntiSniper, "Enabled", "Anti-Sniper", "Предупреждение, если в тебя целятся")
+        createToggle(scrollingFrame, Settings.Combat.AntiSniper, "ShowName", "Show Player Name", "Показывать ник цели")
+        createSlider(scrollingFrame, Settings.Combat.AntiSniper, "Range", "Detection Range", 50, 2000, "m")
+        createSlider(scrollingFrame, Settings.Combat.AntiSniper, "Sensitivity", "Sensitivity", 0.5, 1, "")
+        createSlider(scrollingFrame, Settings.Combat.AntiSniper, "WarningSize", "Warning Size", 10, 40, "px")
+        createToggle(scrollingFrame, Settings.Combat.AntiSniper, "Sound", "Play Sound", "")
+        createColorPicker(scrollingFrame, Settings.Combat.AntiSniper, "WarningColor", "Warning Color")
+
+        createToggle(scrollingFrame, Settings.Combat.BulletTracers, "Enabled", "Bullet Tracers", "Рисовать линии выстрелов")
+        createSlider(scrollingFrame, Settings.Combat.BulletTracers, "Duration", "Duration", 0.1, 2, "s")
+        createSlider(scrollingFrame, Settings.Combat.BulletTracers, "Thickness", "Thickness", 1, 5, "px")
+        createColorPicker(scrollingFrame, Settings.Combat.BulletTracers, "Color", "Color")
+
+        createToggle(scrollingFrame, Settings.Combat, "NoRecoil", "No Recoil", "Убрать отдачу")
+        createToggle(scrollingFrame, Settings.Combat, "NoSpread", "No Spread", "Убрать разброс")
+        createToggle(scrollingFrame, Settings.Combat, "NoJumpSpread", "No Jump Spread", "Убирает разброс при прыжках")
+
+    elseif tab == "HvH 👾" then
+        createToggle(scrollingFrame, Settings.HvH, "Enabled", "HvH Mode", "Включить все HvH-функции", true)
+        createToggle(scrollingFrame, Settings.HvH.AntiAim.Pitch, "Enabled", "Pitch (вертикаль)", "Включить изменение вертикального угла")
+        createCombo(scrollingFrame, Settings.HvH.AntiAim.Pitch, "Mode", "Pitch Mode", {"Static", "Down", "Up", "Random", "Jitter"})
+        createSlider(scrollingFrame, Settings.HvH.AntiAim.Pitch, "Value", "Pitch Angle (Static)", -89, 89, "°")
+        createToggle(scrollingFrame, Settings.HvH.AntiAim.Yaw, "Enabled", "Yaw (горизонталь)", "Включить изменение горизонтального угла")
+        createCombo(scrollingFrame, Settings.HvH.AntiAim.Yaw, "Mode", "Yaw Mode", {"Static", "Spin", "Jitter", "Backwards", "Random", "FakeSpin"})
+        createSlider(scrollingFrame, Settings.HvH.AntiAim.Yaw, "Value", "Yaw Angle (Static)", -180, 180, "°")
+        createSlider(scrollingFrame, Settings.HvH.AntiAim.Yaw, "Speed", "Spin Speed", 1, 50, "°/кадр")
+        createSlider(scrollingFrame, Settings.HvH.AntiAim.Yaw, "JitterRange", "Jitter Range", 10, 180, "°")
+        createToggle(scrollingFrame, Settings.HvH.AutoAntiAimOnHit, "Enabled", "Auto Anti-Aim on Hit", "При получении урона включать джиттер")
+        createSlider(scrollingFrame, Settings.HvH.AutoAntiAimOnHit, "Duration", "Auto Duration (s)", 0.5, 3, "s")
+
+    elseif tab == "Fake Lag" then
+        createToggle(scrollingFrame, Settings.FakeLag, "Enabled", "Fake Lag Enabled", "Вкл/Выкл")
+        createKeybind(scrollingFrame, Settings.FakeLag, "Key", "Activation Key")
+        createSlider(scrollingFrame, Settings.FakeLag, "Duration", "Lag Duration (s)", 0.1, 1, "s")
+        createToggle(scrollingFrame, Settings.FakeLag, "ActivateAntiAim", "Activate Anti-Aim", "При лаге включить Anti-Aim")
+
+    elseif tab == "Trigger ⚡" then
+        createToggle(scrollingFrame, Settings.Triggerbot, "Enabled", "Triggerbot Enabled", "Авто-выстрел при наведении")
+        createCombo(scrollingFrame, Settings.Triggerbot, "Key", "Activation Key", {"MouseButton2", "MouseButton1", "MouseButton3", "X", "C", "V"})
+        createSlider(scrollingFrame, Settings.Triggerbot, "Delay", "Delay (ms)", 0, 500, "ms")
+        createToggle(scrollingFrame, Settings.Triggerbot, "TeamCheck", "Team Check", "Не стрелять в своих")
+        createToggle(scrollingFrame, Settings.Triggerbot, "WallCheck", "Wall Check", "Учитывать стены")
+        createCombo(scrollingFrame, Settings.Triggerbot, "Hitbox", "Target Hitbox", {"Head", "Torso", "Any"})
+        createSlider(scrollingFrame, Settings.Triggerbot, "Range", "Max Distance", 100, 2000, "m")
+
+    elseif tab == "Damage" then
+        createToggle(scrollingFrame, Settings.DamageIndicator, "Enabled", "Damage Indicator", "Показывать урон в зоне", true)
+        createColorPicker(scrollingFrame, Settings.DamageIndicator, "Color", "Damage Color")
+        createSlider(scrollingFrame, Settings.DamageIndicator, "Size", "Font Size", 10, 30, "px")
+        createSlider(scrollingFrame, Settings.DamageIndicator, "Duration", "Duration", 0.2, 2, "s")
+        createSlider(scrollingFrame, Settings.DamageIndicator.Position, "X", "Position X", 0, 1, "")
+        createSlider(scrollingFrame, Settings.DamageIndicator.Position, "Y", "Position Y", 0, 1, "")
+
+    elseif tab == "Misc" then
+        createToggle(scrollingFrame, Settings.Misc, "FPSBoost", "FPS Boost", "⚠️ Сильно снижает качество графики, но повышает FPS")
+        createToggle(scrollingFrame, Settings.Misc, "NightVision", "Night Vision", "Ночное видение")
+    end
+
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+    end)
+end
+
+updateTabContent("Aimbot")
+
+local creditLabel = Instance.new("TextLabel")
+creditLabel.Parent = gui
+creditLabel.Size = UDim2.new(0, 300, 0, 30)
+creditLabel.Position = UDim2.new(0.5, -150, 0.5, 360)
+creditLabel.BackgroundTransparency = 1
+creditLabel.Text = "👑 by llostik x Cha7ok 👑"
+creditLabel.Font = Enum.Font.GothamBold
+creditLabel.TextSize = 18
+creditLabel.TextStrokeTransparency = 0.7
+creditLabel.TextStrokeColor3 = COLORS.PURPLE_DARK
+
+local hue = 0
+RunService.RenderStepped:Connect(function()
+    hue = (hue + 0.002) % 1
+    creditLabel.TextColor3 = Color3.fromHSV(hue, 1, 1)
+end)
+
+-- Кнопка гайда (книжка)
+local guideButton = Instance.new("TextButton")
+guideButton.Parent = gui
+guideButton.Size = UDim2.new(0, 50, 0, 50)
+guideButton.Position = UDim2.new(1, -60, 1, -60)
+guideButton.BackgroundColor3 = COLORS.PURPLE_MED
+guideButton.BackgroundTransparency = 0.3
+guideButton.Text = "📘"
+guideButton.TextColor3 = COLORS.WHITE
+guideButton.Font = Enum.Font.GothamBold
+guideButton.TextSize = 30
+guideButton.BorderSizePixel = 0
+guideButton.Visible = false
+guideButton.MouseButton1Click:Connect(function()
+    if guideOpen then
+        if guideFrame then
+            guideFrame:Destroy()
+            guideFrame = nil
+        end
+        guideOpen = false
+    else
+        guideFrame = Instance.new("Frame")
+        guideFrame.Parent = gui
+        guideFrame.Size = UDim2.new(0, 400, 0, 500)
+        guideFrame.Position = UDim2.new(1, -470, 1, -570)
+        guideFrame.BackgroundColor3 = COLORS.BLACK
+        guideFrame.BackgroundTransparency = 0.2
+        guideFrame.BorderSizePixel = 0
+        guideFrame.Active = true
+
+        local grad = Instance.new("UIGradient")
+        grad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, COLORS.PINK_HOT),
+            ColorSequenceKeypoint.new(1, COLORS.PURPLE_DARK)
+        })
+        grad.Rotation = 90
+        grad.Parent = guideFrame
+
+        local titleGuide = Instance.new("TextLabel")
+        titleGuide.Parent = guideFrame
+        titleGuide.Size = UDim2.new(1, 0, 0, 40)
+        titleGuide.Text = "📘 GGshop XENO - Guide"
+        titleGuide.TextColor3 = COLORS.WHITE
+        titleGuide.Font = Enum.Font.GothamBold
+        titleGuide.TextSize = 20
+        titleGuide.BackgroundTransparency = 1
+
+        local scrollGuide = Instance.new("ScrollingFrame")
+        scrollGuide.Parent = guideFrame
+        scrollGuide.Size = UDim2.new(1, -20, 1, -60)
+        scrollGuide.Position = UDim2.new(0, 10, 0, 45)
+        scrollGuide.BackgroundColor3 = COLORS.GRAY_DARK
+        scrollGuide.BackgroundTransparency = 0.3
+        scrollGuide.BorderSizePixel = 0
+        scrollGuide.ScrollBarThickness = 8
+        scrollGuide.ScrollBarImageColor3 = COLORS.PINK_HOT
+
+        local guideText = Instance.new("TextLabel")
+        guideText.Parent = scrollGuide
+        guideText.Size = UDim2.new(1, -10, 0, 1100)
+        guideText.Position = UDim2.new(0, 5, 0, 5)
+        guideText.Text = [[
+🔹 ВКЛАДКИ:
+
+🎯 AIMBOT
+- Автонаведение в голову в пределах круга (FOV).
+- FOV Radius — радиус круга, рекомендую 40-60.
+- FOV Circle Color / Thickness — настройка внешнего вида.
+- Team/Wall/Alive Check — фильтры целей.
+
+🤖 BOTS AIM
+- Отдельный аим для боссов (Dozer, Anton).
+- Можно выбрать часть тела и дистанцию.
+- Включается/выключается отдельно.
+
+👁️ ESP
+- Показывает игроков, оружие (основное над ником, вторичное под ником), здоровье.
+- Boss ESP — Антон и Дозер подсвечиваются синим/серым, теперь с HP и дистанцией.
+- Tracer — линии от центра экрана к игрокам.
+
+🛡️ ESP(A) — АДМИНЫ И ВИЗУАЛКА
+- Admin ESP — подсвечивает админов красным (даже если они невидимые).
+- Box Color / Name Color / Tracer — настройка внешнего вида.
+- No Flashbang — полностью отключает ослепление от гранат M84 (убирает звук и свет).
+- No Visor Darkening — убирает затемнение от шлемов (Altyn Visor и аналоги), делая обзор чистым.
+- No Grass/Leaves — убирает траву, кусты и листву для повышения FPS.
+- Bullet Physics:
+   * No Gravity — пули летят абсолютно прямо, без падения (лазер).
+   * Instant Hit — пули получают огромную скорость (практически мгновенное попадание).
+
+⚔️ COMBAT
+- Target Health — здоровье текущей цели.
+- Anti-Sniper — предупреждение, если в тебя целятся.
+- Bullet Tracers — визуализация траекторий пуль.
+- No Recoil / No Spread — убрать отдачу/разброс.
+- No Jump Spread — убирает разброс при прыжках (работает даже без NoSpread).
+
+👾 HvH (BETA!!)
+- Anti-Aim (Pitch/Yaw) — ломает хитбокс для врагов.
+- Усиленные режимы: Jitter, Spin, Backwards, FakeSpin.
+- Auto Anti-Aim on Hit — автоматически включается при получении урона.
+
+📶 FAKE LAG
+- Имитация лага (скорость = 0) + Anti-Aim.
+- Настраиваемая клавиша (по умолч. ]).
+
+⚡ TRIGGER
+- Автовыстрел при наведении на врага.
+- Лучше всего работает с винтовками и снайперскими винтовками.
+- Настройка задержки, хитбокса, дистанции.
+
+📊 DAMAGE INDICATOR (BETA!!)
+- Красные цифры урона в зоне (настраивается).
+
+🛠️ MISC
+- FPS Boost — увеличивает FPS, но сильно режет графику.
+- Night Vision — ночное видение.
+- Max Render Distance — увеличивает дальность прорисовки (нагрузка на GPU).
+- Extreme Graphics — максимальное качество графики (сильная нагрузка на GPU).
+
+🔔 ХИТМАРКЕР всегда включён (без настроек).
+        ]]
+        guideText.TextColor3 = COLORS.WHITE
+        guideText.Font = Enum.Font.Gotham
+        guideText.TextSize = 14
+        guideText.TextXAlignment = Enum.TextXAlignment.Left
+        guideText.TextYAlignment = Enum.TextYAlignment.Top
+        guideText.BackgroundTransparency = 1
+
+        guideOpen = true
+    end
+end)
+
+local dragging, dragStart, startPos, dragInput
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+titleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.K then
+        Settings.MenuOpen = not Settings.MenuOpen
+        if Settings.MenuOpen then
+            gui.Enabled = true
+            uiScale.Scale = 0
+            scaleTweenIn:Play()
+            guideButton.Visible = true
+        else
+            scaleTweenOut:Play()
+            task.delay(0.3, function() gui.Enabled = false end)
+            guideButton.Visible = false
+            if guideFrame then
+                guideFrame:Destroy()
+                guideFrame = nil
+                guideOpen = false
+            end
+        end
+    end
+end)
+
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 25: СОХРАНЕНИЕ/ЗАГРУЗКА ПРОФИЛЕЙ
+-- ████████████████████████████████████████████████████████████
+if isfolder and writefile and readfile then
+    local function SaveConfig(profile)
+        profile = profile or Settings.ConfigProfile
+        local saveTable = {
+            ESP = Settings.ESP,
+            Aimbot = Settings.Aimbot,
+            BotsAim = Settings.BotsAim,
+            Misc = Settings.Misc,
+            DamageIndicator = Settings.DamageIndicator,
+            Combat = Settings.Combat,
+            HvH = Settings.HvH,
+            FakeLag = Settings.FakeLag,
+            Triggerbot = Settings.Triggerbot,
+            AdminESP = Settings.AdminESP,
+            Visuals = Settings.Visuals,
+            BulletPhysics = Settings.BulletPhysics,
+        }
+        pcall(function()
+            writefile("GGshopXenoConfig_Profile" .. profile .. ".json", HttpService:JSONEncode(saveTable))
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "GGshop XENO",
+                Text = "Profile " .. profile .. " saved!",
+                Duration = 1
+            })
+        end)
+    end
+
+    local function LoadConfig(profile)
+        profile = profile or Settings.ConfigProfile
+        pcall(function()
+            local data = HttpService:JSONDecode(readfile("GGshopXenoConfig_Profile" .. profile .. ".json"))
+            if data then
+                for k, v in pairs(data) do
+                    if type(v) == "table" then
+                        for sk, sv in pairs(v) do
+                            Settings[k][sk] = sv
+                        end
+                    else
+                        Settings[k] = v
+                    end
+                end
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "GGshop XENO",
+                    Text = "Profile " .. profile .. " loaded!",
+                    Duration = 1
+                })
+            end
+        end)
+    end
+
+    local lastProfileFile = "GGshopXeno_lastProfile.txt"
+    pcall(function()
+        if isfile(lastProfileFile) then
+            Settings.ConfigProfile = tonumber(readfile(lastProfileFile)) or 1
+        end
+    end)
+
+    LoadConfig()
+end
+
+-- ████████████████████████████████████████████████████████████
+-- ЧАСТЬ 26: ЗАВЕРШЕНИЕ
+-- ████████████████████████████████████████████████████████████
+print("[[ GGshop XENO ULTIMATE ЗАГРУЖЕН ]]")
+print("[[ Нажмите K для открытия меню ]]")
+-- ==================== КОНЕЦ ЧАСТИ 2 ====================
