@@ -24,7 +24,7 @@ _________ .__         _________       __
  \______  /___|  (____  /____/ \____/|__|_ \     
         \/     \/     \/                  \/     
     ─────────── PROJECT DELTA - XENO ULTIMATE ───────────
-    🛡️Версия: 17.3
+    🛡️Версия: 19.1 Ultimate Edit
     ⌨️Меню: K
     👑by:llostik & Cha7ok
     if you get banned for your freak game with this legit software, I'm not responsible for it. If you run the script, 
